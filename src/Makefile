@@ -1,11 +1,12 @@
 NVCC= nvcc
-NVCCFLAGS= -O3 -std=c++11 -arch=sm_61
-CXXFLAGS= -Xcompiler="-fopenmp -march=native"
+NVCCFLAGS= -std=c++11 --default-stream per-thread -g -O3 -arch=sm_80 -lineinfo -gencode=arch=compute_80,code=sm_80 --compiler-options -Wall
+CXXFLAGS= -Xcompiler="-fopenmp -march=native" -O3
 
 all: main
 
 main: main.cu
 	$(NVCC) $(NVCCFLAGS) $(CXXFLAGS) main.cu -o main
-
+format:
+	clang-format -i main.cu include/*.hpp include/*.cu
 clean:
-	rm -f main
+		rm -rf main
