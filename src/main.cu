@@ -1,12 +1,17 @@
+#include <assert.h>
 #include <cstdint>
 #include <iostream>
 #include <string>
 
-#include <assert.h>
-
+#include "include/DTW.hpp"
 #include "include/binary_IO.hpp"
+#include "include/cbf_generator.hpp"
+#include "include/common.hpp"
 #include "include/hpc_helpers.hpp"
 
+using namespace FullDTW;
+
+//------------------time macros--------------------------//
 #define TIMERSTART_CUDA(label)                                                 \
   cudaSetDevice(0);                                                            \
   cudaEvent_t start##label, stop##label;                                       \
@@ -25,19 +30,13 @@
                 num_entries) /                                                 \
                    (time##label * 1e6)                                         \
             << " GCUPS (" << #label << ")" << std::endl;
-
-typedef float value_t;    // data type for values
-typedef uint64_t index_t; // data type for indices
-typedef uint8_t label_t;  // data type for label
-
-#include "include/DTW.hpp"
-using namespace FullDTW;
+//..................time macros............................//
 
 int main(int argc, char *argv[]) {
 
   TIMERSTART(malloc)
-  index_t num_entries = 120;  // number of sequences
-  index_t num_features = 577; // length of all sequences
+  index_t num_entries = 1344;  // number of sequences
+  index_t num_features = 1024; // length of all sequences
 
   /* count total cell updates */
   const value_t CU = num_features * num_features * num_entries * num_entries;
@@ -60,8 +59,9 @@ int main(int argc, char *argv[]) {
 
   /* load data from memory into CPU array, initialize GPU results */
   TIMERSTART(load_data)
-  load_binary(data_cpu, num_features * num_entries,
-              "../../../data/kernel/dtw_car.bin");
+  generate_cbf(data_cpu, num_features, num_entries);
+  // load_binary(data_cpu, num_features * num_entries,
+  //             "../../../data/kernel/dtw_car.bin");
   cudaMemcpyAsync(data_gpu, data_cpu,
                   sizeof(value_t) * num_features * num_entries,
                   cudaMemcpyHostToDevice);
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 
   /* perform pairwise DTW computation */
   TIMERSTART_CUDA(computation)
-  distances(data_gpu, dist_gpu, num_features, num_entries);
+  distances(data_gpu, dist_gpu, num_features, num_entries, (float)0.0);
   CUERR
   TIMERSTOP_CUDA(computation)
 
@@ -84,15 +84,17 @@ int main(int argc, char *argv[]) {
   CUERR
   TIMERSTOP(save_data)
 
+#ifdef NV_DEBUG
   /* /1* debug output print *1/ */
-  /* std::cout << "RESULTS:" << std::endl; */
-  /* for (int i = 0; i < num_entries; i++) { */
-  /*     for (int j = 0; j < num_entries; j++) { */
-  /*         std::cout << dist_cpu[i*num_entries+j] << " "; */
-  /*     } */
-  /*     std::cout << std::endl; */
-  /* } */
-  /* std::cout << std::endl; */
+  // std::cout << "RESULTS:" << std::endl;
+  for (int i = 0; i < num_entries; i++) {
+    for (int j = 0; j < num_entries; j++) {
+      std::cout << dist_cpu[i * num_entries + j] << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+#endif
 
   TIMERSTART(free)
   cudaFree(data_gpu);

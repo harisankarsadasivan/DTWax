@@ -5,7 +5,8 @@
 
 template <typename index_t, typename val_t>
 __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
-                        index_t num_entries, index_t num_features) {
+                        index_t num_entries, index_t num_features,
+                        val_t thresh) {
 
   /* create vars for indexing */
   const index_t block_id = blockIdx.x;
@@ -228,103 +229,104 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
 
     /* return result */
     if (wave >= num_waves) {
+      // printf("@@@result_threadId=%0ld\n",result_thread_id);
       if (thread_id == result_thread_id) {
         switch (result_reg) {
         case 0:
-          dist[block_id] = penalty_here0;
+          dist[block_id] = penalty_here0 > thresh ? 0 : 1;
           break;
         case 1:
-          dist[block_id] = penalty_here1;
+          dist[block_id] = penalty_here1 > thresh ? 0 : 1;
           break;
         case 2:
-          dist[block_id] = penalty_here2;
+          dist[block_id] = penalty_here2 > thresh ? 0 : 1;
           break;
         case 3:
-          dist[block_id] = penalty_here3;
+          dist[block_id] = penalty_here3 > thresh ? 0 : 1;
           break;
         case 4:
-          dist[block_id] = penalty_here4;
+          dist[block_id] = penalty_here4 > thresh ? 0 : 1;
           break;
         case 5:
-          dist[block_id] = penalty_here5;
+          dist[block_id] = penalty_here5 > thresh ? 0 : 1;
           break;
         case 6:
-          dist[block_id] = penalty_here6;
+          dist[block_id] = penalty_here6 > thresh ? 0 : 1;
           break;
         case 7:
-          dist[block_id] = penalty_here7;
+          dist[block_id] = penalty_here7 > thresh ? 0 : 1;
           break;
         case 8:
-          dist[block_id] = penalty_here8;
+          dist[block_id] = penalty_here8 > thresh ? 0 : 1;
           break;
         case 9:
-          dist[block_id] = penalty_here9;
+          dist[block_id] = penalty_here9 > thresh ? 0 : 1;
           break;
         case 10:
-          dist[block_id] = penalty_here10;
+          dist[block_id] = penalty_here10 > thresh ? 0 : 1;
           break;
         case 11:
-          dist[block_id] = penalty_here11;
+          dist[block_id] = penalty_here11 > thresh ? 0 : 1;
           break;
         case 12:
-          dist[block_id] = penalty_here12;
+          dist[block_id] = penalty_here12 > thresh ? 0 : 1;
           break;
         case 13:
-          dist[block_id] = penalty_here13;
+          dist[block_id] = penalty_here13 > thresh ? 0 : 1;
           break;
         case 14:
-          dist[block_id] = penalty_here14;
+          dist[block_id] = penalty_here14 > thresh ? 0 : 1;
           break;
         case 15:
-          dist[block_id] = penalty_here15;
+          dist[block_id] = penalty_here15 > thresh ? 0 : 1;
           break;
         case 16:
-          dist[block_id] = penalty_here16;
+          dist[block_id] = penalty_here16 > thresh ? 0 : 1;
           break;
         case 17:
-          dist[block_id] = penalty_here17;
+          dist[block_id] = penalty_here17 > thresh ? 0 : 1;
           break;
         case 18:
-          dist[block_id] = penalty_here18;
+          dist[block_id] = penalty_here18 > thresh ? 0 : 1;
           break;
         case 19:
-          dist[block_id] = penalty_here19;
+          dist[block_id] = penalty_here19 > thresh ? 0 : 1;
           break;
         case 20:
-          dist[block_id] = penalty_here20;
+          dist[block_id] = penalty_here20 > thresh ? 0 : 1;
           break;
         case 21:
-          dist[block_id] = penalty_here21;
+          dist[block_id] = penalty_here21 > thresh ? 0 : 1;
           break;
         case 22:
-          dist[block_id] = penalty_here22;
+          dist[block_id] = penalty_here22 > thresh ? 0 : 1;
           break;
         case 23:
-          dist[block_id] = penalty_here23;
+          dist[block_id] = penalty_here23 > thresh ? 0 : 1;
           break;
         case 24:
-          dist[block_id] = penalty_here24;
+          dist[block_id] = penalty_here24 > thresh ? 0 : 1;
           break;
         case 25:
-          dist[block_id] = penalty_here25;
+          dist[block_id] = penalty_here25 > thresh ? 0 : 1;
           break;
         case 26:
-          dist[block_id] = penalty_here26;
+          dist[block_id] = penalty_here26 > thresh ? 0 : 1;
           break;
         case 27:
-          dist[block_id] = penalty_here27;
+          dist[block_id] = penalty_here27 > thresh ? 0 : 1;
           break;
         case 28:
-          dist[block_id] = penalty_here28;
+          dist[block_id] = penalty_here28 > thresh ? 0 : 1;
           break;
         case 29:
-          dist[block_id] = penalty_here29;
+          dist[block_id] = penalty_here29 > thresh ? 0 : 1;
           break;
         case 30:
-          dist[block_id] = penalty_here30;
+          dist[block_id] = penalty_here30 > thresh ? 0 : 1;
           break;
         case 31:
-          dist[block_id] = penalty_here31;
+          dist[block_id] = penalty_here31 > thresh ? 0 : 1;
           break;
         }
       }
