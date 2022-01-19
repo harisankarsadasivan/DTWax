@@ -1,6 +1,9 @@
 #ifndef FULLDTW
 #define FULLDTW
 
+#include "common.hpp"
+#include <cooperative_groups.h>
+namespace cg = cooperative_groups;
 #define ALL 0xFFFFFFFF
 
 template <typename index_t, typename val_t>
@@ -8,9 +11,13 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
                         index_t num_entries, index_t num_features,
                         val_t thresh) {
 
+  // cooperative threading
+  cg::thread_block_tile<GROUP_SIZE> g =
+      cg::tiled_partition<GROUP_SIZE>(cg::this_thread_block());
+
   /* create vars for indexing */
   const index_t block_id = blockIdx.x;
-  const index_t thread_id = threadIdx.x;
+  const index_t thread_id = cg::this_thread_block().thread_rank();
   const index_t base = block_id * num_features;
   const index_t WARP_SIZE = 32;
   const index_t CELLS_PER_THREAD = 32;
