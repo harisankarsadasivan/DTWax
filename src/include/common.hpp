@@ -10,4 +10,4 @@ typedef uint8_t label_t;  // data type for label
 
 #define QUERY_LEN 1024
 #define BLOCK_NUM 1344
-#define REF_LEN QUERY_LEN *BLOCK_NUM
+#define REF_LEN QUERY_LEN

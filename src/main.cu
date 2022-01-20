@@ -26,52 +26,70 @@ using namespace FullDTW;
   cudaEventSynchronize(stop##label);                                           \
   cudaEventElapsedTime(&time##label, start##label, stop##label);               \
   std::cout << "TIMING: " << time##label << " ms "                             \
-            << ((query_len + 1) * (query_len + 1) * num_entries *              \
-                num_entries) /                                                 \
+            << ((QUERY_LEN + 1) * (REF_LEN + 1) * num_entries) /               \
                    (time##label * 1e6)                                         \
             << " GCUPS (" << #label << ")" << std::endl;
 //..................time macros............................//
+
+//--------------------mem allocate-----///
+// int mem_allocate(value_t *host_query,value_t *host_ref,value_t
+// *device_query,value_t *device_ref,index_t num_entries,value_t *host_dist,
+// value_t *device_dist){
+//   //----host mem allocation----------------//
+//   cudaMallocHost(&host_query,
+//                  sizeof(value_t) * num_entries * QUERY_LEN); /* input */
+//   cudaMallocHost(&host_ref, sizeof(value_t) * REF_LEN);      /* input */
+//   cudaMallocHost(&host_dist,
+//                  sizeof(value_t) * num_entries); /* results */
+
+//   //-------dev mem allocation----------//
+//   cudaMalloc(&device_query, sizeof(value_t) * num_entries * QUERY_LEN);
+
+//   cudaMalloc(&device_ref, sizeof(value_t) * num_entries * num_entries);
+//   cudaMallocHost(&host_dist, sizeof(value_t) * num_entries * num_entries);
+//   cudaMalloc(&device_dist, sizeof(value_t) * num_entries * num_entries);
+//   return 1;
+// }
 
 int main(int argc, char *argv[]) {
 
   TIMERSTART(malloc)
   index_t num_entries = BLOCK_NUM; // number of sequences
-  index_t query_len = QUERY_LEN;   // length of all sequences
 
   /* count total cell updates */
-  const value_t CU = query_len * query_len * num_entries * num_entries;
+  const value_t CU = QUERY_LEN * REF_LEN * num_entries;
   std::cout << "We are going to process " << CU / 1000000000.0
             << " Giga Cell Updates (GCU)" << std::endl;
 
   // create host storage and buffers on devices
-  value_t *host_query = nullptr, // time series on CPU
-      *host_dist = nullptr,      // distance results on CPU
-      *device_query,             // time series on GPU
-      *device_dist,              // distance results on GPU
-          *host_ref = nullptr, *device_ref = nullptr;
-  //----host mem allocation----------------//
+  value_t *host_query = nullptr,      // time series on CPU
+      *host_dist = nullptr,           // distance results on CPU
+          *device_query = nullptr,    // time series on GPU
+              *device_dist = nullptr, // distance results on GPU
+                  *host_ref = nullptr, *device_ref = nullptr;
+
   cudaMallocHost(&host_query,
                  sizeof(value_t) * num_entries * QUERY_LEN); /* input */
   cudaMallocHost(&host_ref, sizeof(value_t) * REF_LEN);      /* input */
-  cudaMallocHost(&host_dist,
-                 sizeof(value_t) * num_entries * num_entries); /* results */
+  cudaMallocHost(&host_dist, sizeof(value_t) * num_entries); /* results */
 
   //-------dev mem allocation----------//
-  cudaMalloc(&device_query, sizeof(value_t) * num_entries * query_len);
+  cudaMalloc(&device_query, sizeof(value_t) * num_entries * QUERY_LEN);
 
   cudaMalloc(&device_ref, sizeof(value_t) * num_entries * num_entries);
   cudaMallocHost(&host_dist, sizeof(value_t) * num_entries * num_entries);
   cudaMalloc(&device_dist, sizeof(value_t) * num_entries * num_entries);
+
   CUERR
   TIMERSTOP(malloc)
 
   /* load data from memory into CPU array, initialize GPU results */
   TIMERSTART(load_data)
-  generate_cbf(host_query, query_len, num_entries);
-  // load_binary(host_dist, query_len * num_entries,
+  generate_cbf(host_query, QUERY_LEN, num_entries);
+  // load_binary(host_dist, QUERY_LEN * num_entries,
   //             "../../../data/kernel/dtw_car.bin");
   cudaMemcpyAsync(device_query, host_query,
-                  sizeof(value_t) * query_len * num_entries,
+                  sizeof(value_t) * QUERY_LEN * num_entries,
                   cudaMemcpyHostToDevice);
   cudaMemcpyAsync(device_ref,
                   host_query, //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
@@ -83,8 +101,7 @@ int main(int argc, char *argv[]) {
 
   /* perform pairwise DTW computation */
   TIMERSTART_CUDA(computation)
-  distances(device_ref, device_query, device_dist, query_len, num_entries,
-            (float)0.0);
+  distances(device_ref, device_query, device_dist, num_entries, (float)0.0);
   CUERR
   TIMERSTOP_CUDA(computation)
 
@@ -99,19 +116,23 @@ int main(int argc, char *argv[]) {
 #ifdef NV_DEBUG
   /* /1* debug output print *1/ */
   // std::cout << "RESULTS:" << std::endl;
-  for (int i = 0; i < num_entries; i++) {
-    for (int j = 0; j < num_entries; j++) {
-      std::cout << host_dist[i * num_entries + j] << " ";
-    }
-    std::cout << std::endl;
+  // for (int i = 0; i < num_entries; i++) {
+  for (int j = 0; j < num_entries; j++) {
+    std::cout << host_dist[j] << " ";
   }
+  std::cout << std::endl;
+  //}
   std::cout << std::endl;
 #endif
 
   TIMERSTART(free)
   cudaFree(device_dist);
   CUERR
-  cudaFree(device_dist);
+  cudaFree(device_query);
+  CUERR
+  cudaFree(device_ref);
+  CUERR
+  cudaFreeHost(host_ref);
   CUERR
   cudaFreeHost(host_query);
   CUERR

@@ -8,8 +8,7 @@ namespace cg = cooperative_groups;
 
 template <typename index_t, typename val_t>
 __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
-                        index_t num_entries, index_t num_features,
-                        val_t thresh) {
+                        index_t num_entries, val_t thresh) {
 
   // cooperative threading
   cg::thread_block_tile<GROUP_SIZE> g =
@@ -18,7 +17,7 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
   /* create vars for indexing */
   const index_t block_id = blockIdx.x;
   const index_t thread_id = cg::this_thread_block().thread_rank();
-  const index_t base = block_id * num_features;
+  const index_t base = block_id * QUERY_LEN;
   const index_t WARP_SIZE = 32;
   const index_t CELLS_PER_THREAD = 32;
 
@@ -129,9 +128,9 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
   new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
 
   /* calculate when to stop, and which thread has final result */
-  index_t num_waves = num_features + (num_features - 1) / CELLS_PER_THREAD;
-  index_t result_thread_id = (num_features - 1) / CELLS_PER_THREAD;
-  index_t result_reg = (num_features - 1) % CELLS_PER_THREAD;
+  index_t num_waves = QUERY_LEN + (QUERY_LEN - 1) / CELLS_PER_THREAD;
+  index_t result_thread_id = (QUERY_LEN - 1) / CELLS_PER_THREAD;
+  index_t result_reg = (QUERY_LEN - 1) % CELLS_PER_THREAD;
 
   /* calculate full matrix in wavefront parallel manner, multiple cells per
    * thread */
