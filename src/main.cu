@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
   /* /1* debug output print *1/ */
   // std::cout << "RESULTS:" << std::endl;
   // for (int i = 0; i < num_entries; i++) {
-  for (int j = 0; j < num_entries; j++) {
+  for (idxt j = 0; j < num_entries; j++) {
     std::cout << host_dist[j] << " ";
   }
   std::cout << std::endl;

@@ -5,6 +5,7 @@
 typedef float value_t;    // data type for values
 typedef uint64_t index_t; // data type for indices
 typedef uint8_t label_t;  // data type for label
+typedef int idxt;
 #define GROUP_SIZE 32
 #define SEGMENT_SIZE 32
 #define WARP_SIZE 32
