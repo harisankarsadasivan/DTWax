@@ -18,8 +18,6 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
   const index_t block_id = blockIdx.x;
   const index_t thread_id = cg::this_thread_block().thread_rank();
   const index_t base = 0; // block_id * QUERY_LEN;
-  const index_t WARP_SIZE = 32;
-  const index_t CELLS_PER_THREAD = 32;
 
   /* initialize penalties */
   val_t penalty_left = INFINITY;
@@ -72,11 +70,11 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
         min(penalty_here[30], min(penalty_here[31], penalty_temp[0]));
 
     /* return result */
-    if (wave >= NUM_WAVES) {
+    if ((wave >= NUM_WAVES) && (thread_id == RESULT_THREAD_ID)) {
       // printf("@@@result_threadId=%0ld\n",RESULT_THREAD_ID);
-      if (thread_id == RESULT_THREAD_ID) {
-        dist[block_id] = penalty_here[RESULT_REG] > thresh ? 0 : 1;
-      }
+
+      dist[block_id] = penalty_here[RESULT_REG] > thresh ? 0 : 1;
+
       return;
     }
 

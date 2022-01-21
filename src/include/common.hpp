@@ -7,6 +7,8 @@ typedef uint64_t index_t; // data type for indices
 typedef uint8_t label_t;  // data type for label
 #define GROUP_SIZE 32
 #define SEGMENT_SIZE 32
+#define WARP_SIZE 32
+#define CELLS_PER_THREAD 32
 //...............global variables..........................//
 
 #define QUERY_LEN 1024
