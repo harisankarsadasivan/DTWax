@@ -76,9 +76,8 @@ int main(int argc, char *argv[]) {
   //-------dev mem allocation----------//
   cudaMalloc(&device_query, sizeof(value_t) * num_entries * QUERY_LEN);
 
-  cudaMalloc(&device_ref, sizeof(value_t) * num_entries * num_entries);
-  cudaMallocHost(&host_dist, sizeof(value_t) * num_entries * num_entries);
-  cudaMalloc(&device_dist, sizeof(value_t) * num_entries * num_entries);
+  cudaMalloc(&device_ref, sizeof(value_t) * REF_LEN);
+  cudaMalloc(&device_dist, sizeof(value_t) * num_entries);
 
   CUERR
   TIMERSTOP(malloc)
@@ -91,11 +90,12 @@ int main(int argc, char *argv[]) {
   cudaMemcpyAsync(device_query, host_query,
                   sizeof(value_t) * QUERY_LEN * num_entries,
                   cudaMemcpyHostToDevice);
-  cudaMemcpyAsync(device_ref,
-                  host_query, //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-                  sizeof(value_t) * REF_LEN, cudaMemcpyHostToDevice);
+  cudaMemcpyAsync(
+      device_ref,
+      &host_query[QUERY_LEN], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
+      sizeof(value_t) * REF_LEN, cudaMemcpyHostToDevice);
   CUERR
-  cudaMemsetAsync(device_dist, 0, sizeof(value_t) * num_entries * num_entries);
+  cudaMemsetAsync(device_dist, 0, sizeof(value_t) * num_entries);
   CUERR
   TIMERSTOP(load_data)
 
@@ -107,8 +107,7 @@ int main(int argc, char *argv[]) {
 
   /* copy results to cpu */
   TIMERSTART(save_data)
-  cudaMemcpyAsync(host_dist, device_dist,
-                  sizeof(value_t) * num_entries * num_entries,
+  cudaMemcpyAsync(host_dist, device_dist, sizeof(value_t) * num_entries,
                   cudaMemcpyDeviceToHost);
   CUERR
   TIMERSTOP(save_data)
