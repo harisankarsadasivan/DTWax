@@ -68,9 +68,11 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
             min(penalty_here[i - 1], min(penalty_here[i + 1], penalty_temp[1]));
       }
 
-      penalty_here[31] =
-          (query_val - subject_val[31]) * (query_val - subject_val[31]) +
-          min(penalty_here[30], min(penalty_here[31], penalty_temp[0]));
+      penalty_here[SEGMENT_SIZE - 1] =
+          (query_val - subject_val[SEGMENT_SIZE - 1]) *
+              (query_val - subject_val[SEGMENT_SIZE - 1]) +
+          min(penalty_here[SEGMENT_SIZE - 2],
+              min(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]));
 
       /* new_query_val buffer is empty, reload */
       if ((wave & (WARP_SIZE - 1)) == 0) {
@@ -101,7 +103,7 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
       return;
     }
 
-    ///----firgue this out----------//
+    ///----figure this out----------//
     //  query_val = INFINITY;
     //  new_query_val = query[block_id * QUERY_LEN + thread_id];
 

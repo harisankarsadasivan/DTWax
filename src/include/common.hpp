@@ -6,13 +6,14 @@ typedef float value_t;    // data type for values
 typedef uint64_t index_t; // data type for indices
 typedef uint8_t label_t;  // data type for label
 typedef int idxt;
-#define GROUP_SIZE 32
-#define SEGMENT_SIZE 32
+
+#define SEGMENT_SIZE 64
 #define WARP_SIZE 32
-#define CELLS_PER_THREAD 32
+#define GROUP_SIZE WARP_SIZE
+#define CELLS_PER_THREAD SEGMENT_SIZE
 //...............global variables..........................//
 
-#define QUERY_LEN 1024
+#define QUERY_LEN 2048
 #define BLOCK_NUM 1344
 #define REF_LEN QUERY_LEN
 

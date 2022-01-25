@@ -26,8 +26,7 @@ using namespace FullDTW;
   cudaEventSynchronize(stop##label);                                           \
   cudaEventElapsedTime(&time##label, start##label, stop##label);               \
   std::cout << "TIMING: " << time##label << " ms "                             \
-            << ((QUERY_LEN + 1) * (REF_LEN + 1) * num_entries) /               \
-                   (time##label * 1e6)                                         \
+            << ((QUERY_LEN) * (REF_LEN)*num_entries) / (time##label * 1e6)     \
             << " GCUPS (" << #label << ")" << std::endl;
 //..................time macros............................//
 
