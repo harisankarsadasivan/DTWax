@@ -89,10 +89,9 @@ int main(int argc, char *argv[]) {
   cudaMemcpyAsync(device_query, host_query,
                   sizeof(value_t) * QUERY_LEN * num_entries,
                   cudaMemcpyHostToDevice);
-  cudaMemcpyAsync(
-      device_ref,
-      &host_query[QUERY_LEN], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-      sizeof(value_t) * REF_LEN, cudaMemcpyHostToDevice);
+  cudaMemcpyAsync(device_ref,
+                  &host_query[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
+                  sizeof(value_t) * REF_LEN, cudaMemcpyHostToDevice);
   CUERR
   cudaMemsetAsync(device_dist, 0, sizeof(value_t) * num_entries);
   CUERR

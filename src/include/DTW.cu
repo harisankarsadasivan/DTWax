@@ -25,9 +25,18 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
   val_t penalty_here[SEGMENT_SIZE] = {INFINITY};
   val_t penalty_temp[2];
 
+  // shared mem to store last col of DP matrix
+  __shared__ val_t penalty_left_s[QUERY_LEN];
+
   /* each thread computes CELLS_PER_THREAD adjacent cells, get corresponding sig
    * values */
+
   val_t subject_val[SEGMENT_SIZE];
+  // /*shared mem to store target reference*/
+
+  // __shared__ val_t reference[REF_LEN];
+  // for(idxt i=0;i<REF_LEN;i+=WARP_SIZE)  reference[i +
+  // thread_id]=subjects[i+thread_id];
 
   /* load next WARP_SIZE query values from memory into new_query_val buffer */
   val_t query_val = INFINITY;
@@ -39,12 +48,15 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
     penalty_diag = 0;
   }
   new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
-  for (idxt ref_batch = 0; ref_batch < REF_LEN / (SEGMENT_SIZE * WARP_SIZE);
-       ref_batch++) {
-    for (idxt i = 0; i < SEGMENT_SIZE; i++) {
-      subject_val[i] = subjects[ref_batch * (SEGMENT_SIZE * WARP_SIZE) +
-                                CELLS_PER_THREAD * thread_id + i];
-    }
+
+  // load ref from global mem
+  for (idxt i = 0; i < SEGMENT_SIZE; i++) {
+    subject_val[i] = subjects[CELLS_PER_THREAD * thread_id + i];
+  }
+
+  // iterate over ref batches
+  for (idxt ref_batch = 0; ref_batch < REF_BATCH; ref_batch++) {
+
     /* calculate full matrix in wavefront parallel manner, multiple cells per
      * thread */
     for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
@@ -89,30 +101,57 @@ __global__ void FullDTW(val_t *subjects, val_t *query, val_t *dist,
       /* transfer border cell info */
       penalty_diag = penalty_left;
       penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
-      if (thread_id == 0) {
+
+      if ((thread_id == 0) && (ref_batch > 0)) {
+        penalty_left = penalty_left_s[(wave - 1) & (QUERY_LEN - 1)];
+      }
+
+      else if ((thread_id == RESULT_THREAD_ID) &&
+               (ref_batch ==
+                0)) // works only for 2 DP matrices!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      {
+
+        penalty_left_s[(wave - 1) & (QUERY_LEN - 1)] =
+            penalty_here[(SEGMENT_SIZE - 1)];
+
+      } else if (thread_id == 0) {
         penalty_left = INFINITY;
       }
     }
+
     /* return result */
     if ((thread_id == RESULT_THREAD_ID) &&
         (ref_batch == ((REF_LEN / (SEGMENT_SIZE * WARP_SIZE)) - 1))) {
       // printf("@@@result_threadId=%0ld\n",RESULT_THREAD_ID);
 
       dist[block_id] = penalty_here[RESULT_REG] > thresh ? 0 : 1;
-
       return;
     }
 
-    ///----figure this out----------//
-    //  query_val = INFINITY;
-    //  new_query_val = query[block_id * QUERY_LEN + thread_id];
+    penalty_left = INFINITY;
+    penalty_diag = INFINITY;
+    // re-initialize for next DP score matrix
+    if (thread_id == 0) {
+      penalty_left = penalty_left_s[0];
+    }
 
-    //  /* initialize first thread's chunk */
-    //  if (thread_id == 0) {
-    //   query_val = new_query_val;
-    //   penalty_diag = 0;
-    //  }
-    //  new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
+    penalty_here[SEGMENT_SIZE] = {INFINITY};
+
+    query_val = INFINITY;
+    new_query_val = query[block_id * QUERY_LEN + thread_id];
+
+    /* initialize first thread's chunk */
+    if (thread_id == 0) {
+      query_val = new_query_val;
+      penalty_diag = 0;
+    }
+    new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
+
+    // load ref from shared mem
+    for (idxt i = 0; i < SEGMENT_SIZE; i++) {
+      subject_val[i] = subjects[(ref_batch + 1) * (SEGMENT_SIZE * WARP_SIZE) +
+                                CELLS_PER_THREAD * thread_id + i];
+    }
   }
 }
 
