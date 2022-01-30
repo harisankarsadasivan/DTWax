@@ -7,14 +7,18 @@ typedef int64_t index_t; // data type for indices
 typedef int8_t label_t;  // data type for label
 typedef int idxt;
 
+//#ifdef NV_DEBUG
 #define SEGMENT_SIZE 32
 #define WARP_SIZE 32
+#define QUERY_LEN 1024
+#define BLOCK_NUM 1344
+//#endif
+
 #define GROUP_SIZE WARP_SIZE
 #define CELLS_PER_THREAD SEGMENT_SIZE
+
 //...............global variables..........................//
 
-#define QUERY_LEN 1024
-#define BLOCK_NUM 1
 #define REF_LEN QUERY_LEN
 #define REF_BATCH REF_LEN / (SEGMENT_SIZE * WARP_SIZE)
 
