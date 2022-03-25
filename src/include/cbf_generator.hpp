@@ -19,10 +19,10 @@ void generate_cbf(value_t *data, index_t num_entries, index_t num_features,
   for (index_t entry = 0; entry < num_entries * num_features; entry++) {
 
     data[entry] = distribution(generator);
-#ifdef NV_DEBUG
-    data[entry] = entry % 10;
+// #ifdef NV_DEBUG
+//     data[entry] = entry % 10;
 
-#endif
+// #endif
   }
 }
 

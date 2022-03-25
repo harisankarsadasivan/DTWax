@@ -9,6 +9,7 @@
 #include "include/common.hpp"
 #include "include/hpc_helpers.hpp"
 
+
 using namespace FullDTW;
 
 //------------------time macros--------------------------//
@@ -110,17 +111,13 @@ int main(int argc, char *argv[]) {
   CUERR
   TIMERSTOP(save_data)
 
-  //#ifdef NV_DEBUG
-  /* /1* debug output print *1/ */
-  // std::cout << "RESULTS:" << std::endl;
-  // for (int i = 0; i < num_entries; i++) {
+  #ifdef NV_DEBUG
+
   for (idxt j = 0; j < num_entries; j++) {
     std::cout << host_dist[j] << " ";
   }
   std::cout << std::endl;
-  //}
-  std::cout << std::endl;
-  //#endif
+  #endif
 
   TIMERSTART(free)
   cudaFree(device_dist);

@@ -1,6 +1,6 @@
 NVCC= nvcc
-NVCCFLAGS= -std=c++11 --default-stream per-thread -O3 -arch=sm_80 -lineinfo -gencode=arch=compute_80,code=sm_80 --compiler-options -Wall #-DNV_DEBUG
-CXXFLAGS= -Xcompiler="-fopenmp -march=native" -O3 #-DNV_DEBUG
+NVCCFLAGS= -std=c++11 --default-stream per-thread -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DNV_DEBUG
+CXXFLAGS= -Xcompiler="-fopenmp -march=native" -O2 #-DNV_DEBUG
 
 all: main
 

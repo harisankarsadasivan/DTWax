@@ -11,7 +11,7 @@ typedef int idxt;
 #define SEGMENT_SIZE 32
 #define WARP_SIZE 32
 #define QUERY_LEN 1024
-#define BLOCK_NUM 1344
+#define BLOCK_NUM 1344*100
 //#endif
 
 #define GROUP_SIZE WARP_SIZE
