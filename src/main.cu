@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   TIMERSTOP(malloc)
 
   //--------data generation-------------------//
-  generate_cbf(host_query, QUERY_LEN, num_entries);
+  generate_cbf<raw_t>(host_query, QUERY_LEN, num_entries);
 
   /* load data from memory into CPU array, initialize GPU results */
   TIMERSTART(load_data)
@@ -144,14 +144,14 @@ int main(int argc, char *argv[]) {
           *device_query = nullptr,    // time series on GPU
               *device_dist = nullptr, // distance results on GPU
                   *host_ref = nullptr, *device_ref = nullptr;
-  int *squiggle_data = nullptr; // random data generated is stored here.
+  raw_t *squiggle_data = nullptr; // random data generated is stored here.
   //------mem allocation---------------//
   TIMERSTART(malloc)
   //--------host mem allocation-----------------//
   cudaMallocHost(&host_query,
                  sizeof(value_ht) * num_entries * QUERY_LEN); /* input */
   cudaMallocHost(&squiggle_data,
-                 sizeof(int) * num_entries * QUERY_LEN);      /* input */
+                 sizeof(raw_t) * num_entries * QUERY_LEN);    /* input */
   cudaMallocHost(&host_ref, sizeof(value_ht) * REF_LEN);      /* input */
   cudaMallocHost(&host_dist, sizeof(value_ht) * num_entries); /* results */
 
@@ -166,8 +166,10 @@ int main(int argc, char *argv[]) {
   //--------data generation and type conversion-------------------//
 
   generate_cbf(squiggle_data, QUERY_LEN, num_entries);
-  for (int i = 0; i < (QUERY_LEN * num_entries); i++)
+#pragma unroll
+  for (int i = 0; i < (QUERY_LEN * num_entries); i++) {
     host_query[i] = __float2half_rn(squiggle_data[i]);
+  }
 
   /* load data from memory into CPU array, initialize GPU results */
   TIMERSTART(load_data)

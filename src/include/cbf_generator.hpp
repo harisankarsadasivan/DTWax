@@ -26,8 +26,8 @@ void generate_cbf(value_t *data, index_t num_entries, index_t num_features,
 }
 
 #else
-
-void generate_cbf(int *data, index_t num_entries, index_t num_features,
+template <typename raw_t>
+void generate_cbf(raw_t *data, index_t num_entries, index_t num_features,
                   uint64_t seed = 42) {
 
   std::default_random_engine generator(seed);
@@ -37,7 +37,7 @@ void generate_cbf(int *data, index_t num_entries, index_t num_features,
 
   for (index_t entry = 0; entry < num_entries * num_features; entry++) {
 
-    data[entry] = (int)distribution(generator);
+    data[entry] = (raw_t)distribution(generator);
     // #ifdef NV_DEBUG
     //     data[entry] = entry % 10;
 

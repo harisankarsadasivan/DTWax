@@ -7,12 +7,13 @@ typedef float value_t;   // data type for values
 typedef int64_t index_t; // data type for indices
 typedef int8_t label_t;  // data type for label
 typedef int idxt;
+typedef float raw_t;
 
 //#ifdef NV_DEBUG
 #define SEGMENT_SIZE 32
 #define WARP_SIZE 32
 #define QUERY_LEN 1024
-#define BLOCK_NUM 1344
+#define BLOCK_NUM (1344 * 1000)
 //#endif
 
 #define GROUP_SIZE WARP_SIZE
