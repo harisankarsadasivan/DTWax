@@ -1,6 +1,7 @@
 #ifndef COMMON_HPP
 #define COMON_HPP
 #endif
+
 //-------------global datatypes---------------------------//
 typedef float value_t;   // data type for values
 typedef int64_t index_t; // data type for indices
@@ -11,7 +12,7 @@ typedef int idxt;
 #define SEGMENT_SIZE 32
 #define WARP_SIZE 32
 #define QUERY_LEN 1024
-#define BLOCK_NUM 1344*100
+#define BLOCK_NUM 1344
 //#endif
 
 #define GROUP_SIZE WARP_SIZE
