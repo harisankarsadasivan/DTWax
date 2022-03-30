@@ -13,7 +13,7 @@ typedef float raw_t;
 #define SEGMENT_SIZE 32
 #define WARP_SIZE 32
 #define QUERY_LEN 1024
-#define BLOCK_NUM (1344 * 1000)
+#define BLOCK_NUM (108 * 32 * 500)
 //#endif
 
 #define GROUP_SIZE WARP_SIZE
