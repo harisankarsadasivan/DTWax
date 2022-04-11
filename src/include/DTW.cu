@@ -7,13 +7,15 @@
 #ifdef FP16 // FP16 definitions
 
 #include <cuda_fp16.h>
-#define FLOAT2HALF(a) __float2half_rn(a)
-#define FIND_MIN(a, b) __hmin(a, b)
+#define FLOAT2HALF(a) __float2half2_rn(a)
+#define FIND_MIN(a, b) __hmin2(a, b)
+#define FMA(a, b, c) __hfma2(a, b, c)
 
 #else // FP32 definitions
 
 #define FLOAT2HALF(a) a
 #define FIND_MIN(a, b) min(a, b)
+#define FMA(a, b, c) (a * b + c)
 
 #endif
 
@@ -71,34 +73,34 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
     /* calculate CELLS_PER_THREAD cells */
     penalty_temp[0] = penalty_here[0];
     penalty_here[0] =
-        (query_val - subject_val[0]) * (query_val - subject_val[0]) +
-        FIND_MIN(penalty_left, FIND_MIN(penalty_here[0], penalty_diag));
+        FMA((query_val - subject_val[0]), (query_val - subject_val[0]),
+            FIND_MIN(penalty_left, FIND_MIN(penalty_here[0], penalty_diag)));
 
     for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
       penalty_temp[1] = penalty_here[i];
       penalty_here[i] =
-          (query_val - subject_val[i]) * (query_val - subject_val[i]) +
-          FIND_MIN(penalty_here[i - 1],
-                   FIND_MIN(penalty_here[i], penalty_temp[0]));
+          FMA((query_val - subject_val[i]), (query_val - subject_val[i]),
+              FIND_MIN(penalty_here[i - 1],
+                       FIND_MIN(penalty_here[i], penalty_temp[0])));
 
       penalty_temp[0] = penalty_here[i + 1];
-      penalty_here[i + 1] =
-          (query_val - subject_val[i + 1]) * (query_val - subject_val[i + 1]) +
+      penalty_here[i + 1] = FMA(
+          (query_val - subject_val[i + 1]), (query_val - subject_val[i + 1]),
           FIND_MIN(penalty_here[i - 1],
-                   FIND_MIN(penalty_here[i + 1], penalty_temp[1]));
+                   FIND_MIN(penalty_here[i + 1], penalty_temp[1])));
     }
 #ifndef NV_DEBUG
-    penalty_here[SEGMENT_SIZE - 1] =
-        (query_val - subject_val[SEGMENT_SIZE - 1]) *
-            (query_val - subject_val[SEGMENT_SIZE - 1]) +
+    penalty_here[SEGMENT_SIZE - 1] = FMA(
+        (query_val - subject_val[SEGMENT_SIZE - 1]),
+        (query_val - subject_val[SEGMENT_SIZE - 1]),
         FIND_MIN(penalty_here[SEGMENT_SIZE - 2],
-                 FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]));
+                 FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
 #else
-    penalty_here[SEGMENT_SIZE - 1] =
-        (query_val - subject_val[SEGMENT_SIZE - 1]) *
-            (query_val - subject_val[SEGMENT_SIZE - 1]) +
-        FIND_MIN(INFINITY,
-                 FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]));
+    penalty_here[SEGMENT_SIZE - 1] = FMA(
+        (query_val - subject_val[SEGMENT_SIZE - 1]),
+        (query_val - subject_val[SEGMENT_SIZE - 1]),
+        FIND_MIN(FLOAT2HALF(INFINITY),
+                 FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
 #endif
 
     /* new_query_val buffer is empty, reload */
@@ -168,35 +170,34 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
       /* calculate CELLS_PER_THREAD cells */
       penalty_temp[0] = penalty_here[0];
       penalty_here[0] =
-          (query_val - subject_val[0]) * (query_val - subject_val[0]) +
-          FIND_MIN(penalty_left, FIND_MIN(penalty_here[0], penalty_diag));
+          FMA((query_val - subject_val[0]), (query_val - subject_val[0]),
+              FIND_MIN(penalty_left, FIND_MIN(penalty_here[0], penalty_diag)));
 
       for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
         penalty_temp[1] = penalty_here[i];
         penalty_here[i] =
-            (query_val - subject_val[i]) * (query_val - subject_val[i]) +
-            FIND_MIN(penalty_here[i - 1],
-                     FIND_MIN(penalty_here[i], penalty_temp[0]));
+            FMA((query_val - subject_val[i]), (query_val - subject_val[i]),
+                FIND_MIN(penalty_here[i - 1],
+                         FIND_MIN(penalty_here[i], penalty_temp[0])));
 
         penalty_temp[0] = penalty_here[i + 1];
-        penalty_here[i + 1] =
-            (query_val - subject_val[i + 1]) *
-                (query_val - subject_val[i + 1]) +
+        penalty_here[i + 1] = FMA(
+            (query_val - subject_val[i + 1]), (query_val - subject_val[i + 1]),
             FIND_MIN(penalty_here[i - 1],
-                     FIND_MIN(penalty_here[i + 1], penalty_temp[1]));
+                     FIND_MIN(penalty_here[i + 1], penalty_temp[1])));
       }
 #ifndef NV_DEBUG
-      penalty_here[SEGMENT_SIZE - 1] =
-          (query_val - subject_val[SEGMENT_SIZE - 1]) *
-              (query_val - subject_val[SEGMENT_SIZE - 1]) +
+      penalty_here[SEGMENT_SIZE - 1] = FMA(
+          (query_val - subject_val[SEGMENT_SIZE - 1]),
+          (query_val - subject_val[SEGMENT_SIZE - 1]),
           FIND_MIN(penalty_here[SEGMENT_SIZE - 2],
-                   FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]));
+                   FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
 #else
-      penalty_here[SEGMENT_SIZE - 1] =
-          (query_val - subject_val[SEGMENT_SIZE - 1]) *
-              (query_val - subject_val[SEGMENT_SIZE - 1]) +
-          FIND_MIN(INFINITY,
-                   FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]));
+      penalty_here[SEGMENT_SIZE - 1] = FMA(
+          (query_val - subject_val[SEGMENT_SIZE - 1]),
+          (query_val - subject_val[SEGMENT_SIZE - 1]),
+          FIND_MIN(FLOAT2HALF(INFINITY),
+                   FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
 #endif
 
       /* new_query_val buffer is empty, reload */
@@ -286,34 +287,34 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
     /* calculate CELLS_PER_THREAD cells */
     penalty_temp[0] = penalty_here[0];
     penalty_here[0] =
-        (query_val - subject_val[0]) * (query_val - subject_val[0]) +
-        FIND_MIN(penalty_left, FIND_MIN(penalty_here[0], penalty_diag));
+        FMA((query_val - subject_val[0]), (query_val - subject_val[0]),
+            FIND_MIN(penalty_left, FIND_MIN(penalty_here[0], penalty_diag)));
 
     for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
       penalty_temp[1] = penalty_here[i];
       penalty_here[i] =
-          (query_val - subject_val[i]) * (query_val - subject_val[i]) +
-          FIND_MIN(penalty_here[i - 1],
-                   FIND_MIN(penalty_here[i], penalty_temp[0]));
+          FMA((query_val - subject_val[i]), (query_val - subject_val[i]),
+              FIND_MIN(penalty_here[i - 1],
+                       FIND_MIN(penalty_here[i], penalty_temp[0])));
 
       penalty_temp[0] = penalty_here[i + 1];
-      penalty_here[i + 1] =
-          (query_val - subject_val[i + 1]) * (query_val - subject_val[i + 1]) +
+      penalty_here[i + 1] = FMA(
+          (query_val - subject_val[i + 1]), (query_val - subject_val[i + 1]),
           FIND_MIN(penalty_here[i - 1],
-                   FIND_MIN(penalty_here[i + 1], penalty_temp[1]));
+                   FIND_MIN(penalty_here[i + 1], penalty_temp[1])));
     }
 #ifndef NV_DEBUG
-    penalty_here[SEGMENT_SIZE - 1] =
-        (query_val - subject_val[SEGMENT_SIZE - 1]) *
-            (query_val - subject_val[SEGMENT_SIZE - 1]) +
+    penalty_here[SEGMENT_SIZE - 1] = FMA(
+        (query_val - subject_val[SEGMENT_SIZE - 1]),
+        (query_val - subject_val[SEGMENT_SIZE - 1]),
         FIND_MIN(penalty_here[SEGMENT_SIZE - 2],
-                 FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]));
+                 FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
 #else
-    penalty_here[SEGMENT_SIZE - 1] =
-        (query_val - subject_val[SEGMENT_SIZE - 1]) *
-            (query_val - subject_val[SEGMENT_SIZE - 1]) +
-        FIND_MIN(INFINITY,
-                 FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]));
+    penalty_here[SEGMENT_SIZE - 1] = FMA(
+        (query_val - subject_val[SEGMENT_SIZE - 1]),
+        (query_val - subject_val[SEGMENT_SIZE - 1]),
+        FIND_MIN(FLOAT2HALF(INFINITY),
+                 FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
 #endif
 
     /* new_query_val buffer is empty, reload */
@@ -332,7 +333,7 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
     penalty_diag = penalty_left;
     penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
     if (thread_id == 0) {
-      penalty_left = INFINITY;
+      penalty_left = FLOAT2HALF(INFINITY);
     }
     if ((wave >= WARP_SIZE) && (thread_id == RESULT_THREAD_ID)) {
       penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
@@ -384,35 +385,34 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
       /* calculate CELLS_PER_THREAD cells */
       penalty_temp[0] = penalty_here[0];
       penalty_here[0] =
-          (query_val - subject_val[0]) * (query_val - subject_val[0]) +
-          FIND_MIN(penalty_left, FIND_MIN(penalty_here[0], penalty_diag));
+          FMA((query_val - subject_val[0]), (query_val - subject_val[0]),
+              FIND_MIN(penalty_left, FIND_MIN(penalty_here[0], penalty_diag)));
 
       for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
         penalty_temp[1] = penalty_here[i];
         penalty_here[i] =
-            (query_val - subject_val[i]) * (query_val - subject_val[i]) +
-            FIND_MIN(penalty_here[i - 1],
-                     FIND_MIN(penalty_here[i], penalty_temp[0]));
+            FMA((query_val - subject_val[i]), (query_val - subject_val[i]),
+                FIND_MIN(penalty_here[i - 1],
+                         FIND_MIN(penalty_here[i], penalty_temp[0])));
 
         penalty_temp[0] = penalty_here[i + 1];
-        penalty_here[i + 1] =
-            (query_val - subject_val[i + 1]) *
-                (query_val - subject_val[i + 1]) +
+        penalty_here[i + 1] = FMA(
+            (query_val - subject_val[i + 1]), (query_val - subject_val[i + 1]),
             FIND_MIN(penalty_here[i - 1],
-                     FIND_MIN(penalty_here[i + 1], penalty_temp[1]));
+                     FIND_MIN(penalty_here[i + 1], penalty_temp[1])));
       }
 #ifndef NV_DEBUG
-      penalty_here[SEGMENT_SIZE - 1] =
-          (query_val - subject_val[SEGMENT_SIZE - 1]) *
-              (query_val - subject_val[SEGMENT_SIZE - 1]) +
+      penalty_here[SEGMENT_SIZE - 1] = FMA(
+          (query_val - subject_val[SEGMENT_SIZE - 1]),
+          (query_val - subject_val[SEGMENT_SIZE - 1]),
           FIND_MIN(penalty_here[SEGMENT_SIZE - 2],
-                   FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]));
+                   FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
 #else
-      penalty_here[SEGMENT_SIZE - 1] =
-          (query_val - subject_val[SEGMENT_SIZE - 1]) *
-              (query_val - subject_val[SEGMENT_SIZE - 1]) +
-          FIND_MIN(INFINITY,
-                   FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]));
+      penalty_here[SEGMENT_SIZE - 1] = FMA(
+          (query_val - subject_val[SEGMENT_SIZE - 1]),
+          (query_val - subject_val[SEGMENT_SIZE - 1]),
+          FIND_MIN(FLOAT2HALF(INFINITY),
+                   FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
 #endif
 
       /* new_query_val buffer is empty, reload */

@@ -9,12 +9,17 @@ typedef int8_t label_t;  // data type for label
 typedef int idxt;
 typedef float raw_t;
 
-//#ifdef NV_DEBUG
+#ifndef FP16
+
 #define SEGMENT_SIZE 32
+#else
+
+#define SEGMENT_SIZE 16
+#endif
+
 #define WARP_SIZE 32
 #define QUERY_LEN 1024
-#define BLOCK_NUM (108 * 32 * 500)
-//#endif
+#define BLOCK_NUM (84 * 16)
 
 #define GROUP_SIZE WARP_SIZE
 #define CELLS_PER_THREAD SEGMENT_SIZE

@@ -16,12 +16,12 @@ using namespace FullDTW;
 
 #ifdef FP16
 #include <cuda_fp16.h>
-#define FLOAT2HALF(a) __float2half_rn(a)
+#define FLOAT2HALF(a) __float2half2_rn(a)
 #define HALF2FLOAT(a) __half2float(a)
-typedef __half value_ht;
-
+typedef __half2 value_ht;
+#define FP_PIPES 2
 #else
-
+#define FP_PIPES 1
 #define FLOAT2HALF(a) a
 #define HALF2FLOAT(a) a
 typedef float value_ht;
@@ -41,7 +41,8 @@ typedef float value_ht;
   cudaEventSynchronize(stop##label);                                           \
   cudaEventElapsedTime(&time##label, start##label, stop##label);               \
   std::cout << "TIMING: " << time##label << " ms "                             \
-            << ((QUERY_LEN) * (REF_LEN)*num_entries) / (time##label * 1e6)     \
+            << ((QUERY_LEN) * (REF_LEN)*num_entries * FP_PIPES) /              \
+                   (time##label * 1e6)                                         \
             << " GCUPS (" << #label << ")" << std::endl;
 //..................time macros............................//
 
@@ -118,10 +119,20 @@ int main(int argc, char *argv[]) {
   TIMERSTOP(save_data)
 
 #ifdef NV_DEBUG
-
+#ifndef FP16
   for (idxt j = 0; j < num_entries; j++) {
     std::cout << HALF2FLOAT(host_dist[j]) << " ";
   }
+#else
+  for (idxt j = 0; j < num_entries; j++) {
+    std::cout << HALF2FLOAT(host_dist[j].x) << " ";
+  }
+  std::cout << std::endl;
+  for (idxt j = 0; j < num_entries; j++) {
+    std::cout << HALF2FLOAT(host_dist[j].y) << " ";
+  }
+
+#endif
   std::cout << std::endl;
 #endif
 
