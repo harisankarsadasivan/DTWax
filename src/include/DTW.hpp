@@ -12,11 +12,9 @@ __host__ void distances(val_t *ref, val_t *query, val_t *dists,
                         index_t num_entries, val_t thresh,
                         cudaStream_t stream) {
 
-  // for (index_t seq_idx = 0; seq_idx < num_entries; seq_idx++) {
+  DTW<index_t, val_t><<<BLOCK_NUM, WARP_SIZE, 0, stream>>>(ref, query, dists,
+                                                           num_entries, thresh);
 
-  DTW<index_t, val_t><<<num_entries, WARP_SIZE, 0, stream>>>(
-      ref, query, dists, num_entries, thresh);
-  //}
   return;
 }
 
