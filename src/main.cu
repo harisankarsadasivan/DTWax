@@ -28,7 +28,7 @@ typedef float value_ht;
 #endif
 
 //------------------------------------------------------------time
-//macros-----------------------------------------------------//
+// macros-----------------------------------------------------//
 #define TIMERSTART_CUDA(label)                                                 \
   cudaSetDevice(0);                                                            \
   cudaEvent_t start##label, stop##label;                                       \
@@ -47,7 +47,7 @@ typedef float value_ht;
                 FP_PIPES)                                                      \
             << " GCUPS (" << #label << ")" << std::endl;
 //..........................................................other
-//macros.......................................................//
+// macros.......................................................//
 #define ASSERT(ans)                                                            \
   { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line,
@@ -60,7 +60,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line,
   }
 }
 //---------------------------------------------------------global
-//vars----------------------------------------------------------//
+// vars----------------------------------------------------------//
 cudaStream_t stream_var[STREAM_NUM];
 
 int main(int argc, char *argv[]) {
@@ -79,11 +79,11 @@ int main(int argc, char *argv[]) {
   raw_t *squiggle_data; // random data generated is stored here.
 
   //-------------------------------------------------------mem
-  //allocation----------------------------------------------------------//
+  // allocation----------------------------------------------------------//
   TIMERSTART(malloc)
 
   //--------------------------------------------------------host mem
-  //allocation--------------------------------------------------//
+  // allocation--------------------------------------------------//
   ASSERT(cudaMallocHost(&host_query,
                         sizeof(value_ht) * NUM_READS * QUERY_LEN)); /* input */
   ASSERT(cudaMallocHost(&squiggle_data,
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
       cudaMallocHost(&host_dist, sizeof(value_ht) * NUM_READS)); /* results */
 
   //-------------------------------------------------------------dev mem
-  //allocation-------------------------------------------------//
+  // allocation-------------------------------------------------//
   ASSERT(cudaMalloc(&device_ref, sizeof(value_ht) * REF_LEN));
   for (int stream_id = 0; stream_id < STREAM_NUM; stream_id++) {
     ASSERT(cudaMalloc(&device_query[stream_id],
@@ -105,12 +105,13 @@ int main(int argc, char *argv[]) {
   TIMERSTOP(malloc)
 
   //-----------------------------------------------------------squiggle data
-  //generation, type conversion, d2h copy target reference and clear some of
-  //host mem--------------------------------------//
+  // generation, type conversion, d2h copy target reference and clear some of
+  // host mem--------------------------------------//
   TIMERSTART(generate_data)
   generate_cbf(squiggle_data, QUERY_LEN, NUM_READS);
 #pragma unroll
-  for (int i = 0; i < (QUERY_LEN * NUM_READS); i++) {
+  for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
+       i++) {
     host_query[i] = FLOAT2HALF(squiggle_data[i]);
   }
   ASSERT(cudaMemcpyAsync(
@@ -125,7 +126,7 @@ int main(int argc, char *argv[]) {
    * computation----------------------------------------- */
   TIMERSTART_CUDA(concurrent_kernel_launch)
   //-------------total batches of concurrent workload to & fro
-  //device---------------//
+  // device---------------//
   int batch_count = NUM_READS / (BLOCK_NUM * STREAM_NUM);
 
   for (int batch_id = 0; batch_id < batch_count; batch_id++) {
@@ -162,11 +163,11 @@ int main(int argc, char *argv[]) {
     std::cout << HALF2FLOAT(host_dist[j]) << " ";
   }
 #else
-  for (idxt j = 0; j < NUM_READS; j++) {
+  for (uint64_t j = 0; j < NUM_READS; j++) {
     std::cout << HALF2FLOAT(host_dist[j].x) << " ";
   }
   std::cout << std::endl;
-  for (idxt j = 0; j < NUM_READS; j++) {
+  for (uint64_t j = 0; j < NUM_READS; j++) {
     std::cout << HALF2FLOAT(host_dist[j].y) << " ";
   }
 

@@ -18,12 +18,12 @@ typedef float raw_t;
 
 #define WARP_SIZE 32
 #define QUERY_LEN 1024
-#define BLOCK_NUM (84 * 16)
+#define BLOCK_NUM (108 * 32)
 #define STREAM_NUM 16
 
 //-----------------derived variables--------------------------//
 #define REF_LEN QUERY_LEN
-#define NUM_READS (BLOCK_NUM * STREAM_NUM * 90)
+#define NUM_READS (BLOCK_NUM * STREAM_NUM * 30)
 #define GROUP_SIZE WARP_SIZE
 #define CELLS_PER_THREAD SEGMENT_SIZE
 
