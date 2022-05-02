@@ -13,7 +13,7 @@ typedef float raw_t;
 #ifndef FP16
 #define SEGMENT_SIZE 32
 #else
-#define SEGMENT_SIZE 16
+#define SEGMENT_SIZE 32
 #endif
 
 #define WARP_SIZE 32

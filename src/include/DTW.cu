@@ -64,7 +64,8 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
   // for (idxt ref_batch = 0; ref_batch < REF_LEN / (SEGMENT_SIZE * WARP_SIZE);
   //      ref_batch++) {
   for (idxt i = 0; i < SEGMENT_SIZE; i++) {
-    subject_val[i] = subjects[CELLS_PER_THREAD * thread_id + i];
+    // subject_val[i] = subjects[CELLS_PER_THREAD * thread_id + i];
+    subject_val[i] = subjects[thread_id + i * WARP_SIZE];
   }
   /* calculate full matrix in wavefront parallel manner, multiple cells per
    * thread */

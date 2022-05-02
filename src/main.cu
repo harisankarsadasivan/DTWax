@@ -73,6 +73,7 @@ int main(int argc, char *argv[]) {
   // create host storage and buffers on devices
   value_ht *host_query,          // time series on CPU
       *host_dist,                // distance results on CPU
+      *host_ref,                 // re-arranged ref  time series on CPU
       *device_query[STREAM_NUM], // time series on GPU
       *device_dist[STREAM_NUM],  // distance results on GPU
       *device_ref;
@@ -86,6 +87,7 @@ int main(int argc, char *argv[]) {
   // allocation--------------------------------------------------//
   ASSERT(cudaMallocHost(&host_query,
                         sizeof(value_ht) * NUM_READS * QUERY_LEN)); /* input */
+  ASSERT(cudaMallocHost(&host_ref, sizeof(value_ht) * REF_LEN));    /* input */
   ASSERT(cudaMallocHost(&squiggle_data,
                         sizeof(raw_t) * NUM_READS * QUERY_LEN)); /* input */
 
@@ -114,9 +116,19 @@ int main(int argc, char *argv[]) {
        i++) {
     host_query[i] = FLOAT2HALF(squiggle_data[i]);
   }
+
+  //----------re-arranging target reference for memory
+  //coalescing-----------------//
+  uint64_t k = 0;
+  for (uint64_t i = 0; i < SEGMENT_SIZE; i++) {
+
+    for (uint64_t j = 0; j < WARP_SIZE; j++) {
+      host_ref[k++] = FLOAT2HALF(squiggle_data[i + (j * SEGMENT_SIZE)]);
+    }
+  }
   ASSERT(cudaMemcpyAsync(
       device_ref,
-      &host_query[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
+      &host_ref[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
       sizeof(value_ht) * REF_LEN, cudaMemcpyHostToDevice));
   cudaFreeHost(squiggle_data);
   TIMERSTOP(generate_data)
