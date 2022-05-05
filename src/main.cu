@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
   }
 
   //----------re-arranging target reference for memory
-  //coalescing-----------------//
+  // coalescing-----------------//
   uint64_t k = 0;
   for (uint64_t i = 0; i < SEGMENT_SIZE; i++) {
 
