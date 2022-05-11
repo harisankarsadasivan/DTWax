@@ -63,7 +63,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line,
 // vars----------------------------------------------------------//
 cudaStream_t stream_var[STREAM_NUM];
 
-int main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
 
   /* count total cell updates */
   std::cout << "We are going to process "
@@ -110,28 +110,39 @@ int main(int argc, char *argv[]) {
   // generation, type conversion, d2h copy target reference and clear some of
   // host mem--------------------------------------//
   TIMERSTART(generate_data)
+#ifndef FAST5
   generate_cbf(squiggle_data, QUERY_LEN, NUM_READS);
-#pragma unroll
+#else
+  std::cout << "Loading ONT " << ONT_FILE_FORMAT << " reads from " << argv[1]
+            << "\n";
+  load_from_fast5_folder(argv[1], squiggle_data);
+#endif
+
+#pragma omp parallel for
   for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
        i++) {
     host_query[i] = FLOAT2HALF(squiggle_data[i]);
   }
 
+  TIMERSTOP(generate_data)
   //----------re-arranging target reference for memory
   // coalescing-----------------//
   uint64_t k = 0;
+
+  TIMERSTART(generate_and_load_target)
   for (uint64_t i = 0; i < SEGMENT_SIZE; i++) {
 
     for (uint64_t j = 0; j < WARP_SIZE; j++) {
       host_ref[k++] = FLOAT2HALF(squiggle_data[i + (j * SEGMENT_SIZE)]);
     }
   }
+
   ASSERT(cudaMemcpyAsync(
       device_ref,
       &host_ref[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
       sizeof(value_ht) * REF_LEN, cudaMemcpyHostToDevice));
   cudaFreeHost(squiggle_data);
-  TIMERSTOP(generate_data)
+  TIMERSTOP(generate_and_load_target)
 
   /*-------------------------------------------------------------- performs
    * memory I/O and  pairwise DTW

@@ -20,12 +20,18 @@
 #endif
 
 // define the common cost fuction per cell for DP programing
-//#define COST_FUNCTION(query,target,left,right,diag)
-// FMA(__hsub2(query,target),__hsu2(query,target),FIND_MIN(left,FIND_MIN(right,diag)))
-// #define COST_FUNCTION(query, target, left, up, diag) \
+
+//#define COST_FUNCT(query,target,left,right,diag)  \
+ //FMA(__hsub2(query,target),__hsub2(query,target),FIND_MIN(left,diag))
+
+#define COST_FUNCT(query, target, left, diag)                                  \
+  FMA(FMA(query, FLOAT2HALF(-1), target), FMA(query, FLOAT2HALF(-1), target),  \
+      FIND_MIN(left, diag))
+
+// #define COST_FUNCT(query, target, left, up, diag) \
 //   FMA(__habs2(__hsub2(query,target)), FLOAT2HALF(1), FIND_MIN(diag, up))
-#define COST_FUNCTION(query, target, left, up, diag)                           \
-  (__habs2(__hsub2(query, target)) + FIND_MIN(diag, up))
+//#define COST_FUNCT(query, target, left, up, diag)                           \
+//  (__habs2(__hsub2(query, target)) + FIND_MIN(diag, up))
 namespace cg = cooperative_groups;
 #define ALL 0xFFFFFFFF
 
@@ -52,8 +58,7 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
   val_t penalty_left = FLOAT2HALF(INFINITY);
   val_t penalty_diag = FLOAT2HALF(INFINITY);
   val_t penalty_here[SEGMENT_SIZE] = {FLOAT2HALF(INFINITY)};
-  val_t penalty_temp[2];
-
+  // val_t penalty_temp[2];
   /* each thread computes CELLS_PER_THREAD adjacent cells, get corresponding sig
    * values */
   val_t subject_val[SEGMENT_SIZE];
@@ -79,30 +84,28 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
   for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
 
     /* calculate CELLS_PER_THREAD cells */
-    penalty_temp[0] = penalty_here[0];
-    penalty_here[0] = COST_FUNCTION(query_val, subject_val[0], penalty_left,
-                                    penalty_here[0], penalty_diag);
+    // penalty_temp[0] = penalty_here[0];
+    penalty_here[0] =
+        COST_FUNCT(query_val, subject_val[0], penalty_left, penalty_diag);
 
     for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
-      penalty_temp[1] = penalty_here[i];
-      penalty_here[i] =
-          COST_FUNCTION(query_val, subject_val[i], penalty_here[i - 1],
-                        penalty_here[i], penalty_temp[0]);
+      // penalty_temp[1] = penalty_here[i];
+      penalty_here[i] = COST_FUNCT(query_val, subject_val[i],
+                                   penalty_here[i - 1], penalty_here[i]);
 
-      penalty_temp[0] = penalty_here[i + 1];
+      // penalty_temp[0] = penalty_here[i + 1];
       penalty_here[i + 1] =
-          COST_FUNCTION(query_val, subject_val[i + 1], penalty_here[i - 1],
-                        penalty_here[i + 1], penalty_temp[1]);
+          COST_FUNCT(query_val, subject_val[i + 1], penalty_here[i - 1],
+                     penalty_here[i + 1]);
     }
 #ifndef NV_DEBUG
-    penalty_here[SEGMENT_SIZE - 1] =
-        COST_FUNCTION(query_val, subject_val[SEGMENT_SIZE - 1],
-                      penalty_here[SEGMENT_SIZE - 2],
-                      penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+    penalty_here[SEGMENT_SIZE - 1] = COST_FUNCT(
+        query_val, subject_val[SEGMENT_SIZE - 1],
+        penalty_here[SEGMENT_SIZE - 2], penalty_here[SEGMENT_SIZE - 1]);
 #else
-    penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-        query_val, subject_val[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
-        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+    penalty_here[SEGMENT_SIZE - 1] =
+        COST_FUNCT(query_val, subject_val[SEGMENT_SIZE - 1],
+                   FLOAT2HALF(INFINITY), penalty_here[SEGMENT_SIZE - 1]);
 #endif
 
     /* new_query_val buffer is empty, reload */
@@ -145,8 +148,8 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
     penalty_diag = FLOAT2HALF(INFINITY);
     for (auto i = 0; i < SEGMENT_SIZE; i++)
       penalty_here[i] = FLOAT2HALF(INFINITY);
-    for (auto i = 0; i < 2; i++)
-      penalty_temp[i] = FLOAT2HALF(INFINITY);
+    // for (auto i = 0; i < 2; i++)
+    //  penalty_temp[i] = FLOAT2HALF(INFINITY);
 
     /* load next WARP_SIZE query values from memory into new_query_val buffer */
     query_val = FLOAT2HALF(INFINITY);
@@ -170,30 +173,28 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
     for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
 
       /* calculate CELLS_PER_THREAD cells */
-      penalty_temp[0] = penalty_here[0];
-      penalty_here[0] = COST_FUNCTION(query_val, subject_val[0], penalty_left,
-                                      penalty_here[0], penalty_diag);
+      // penalty_temp[0] = penalty_here[0];
+      penalty_here[0] =
+          COST_FUNCT(query_val, subject_val[0], penalty_left, penalty_diag);
 
       for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
-        penalty_temp[1] = penalty_here[i];
-        penalty_here[i] =
-            COST_FUNCTION(query_val, subject_val[i], penalty_here[i - 1],
-                          penalty_here[i], penalty_temp[0]);
+        // penalty_temp[1] = penalty_here[i];
+        penalty_here[i] = COST_FUNCT(query_val, subject_val[i],
+                                     penalty_here[i - 1], penalty_here[i]);
 
-        penalty_temp[0] = penalty_here[i + 1];
+        // penalty_temp[0] = penalty_here[i + 1];
         penalty_here[i + 1] =
-            COST_FUNCTION(query_val, subject_val[i + 1], penalty_here[i - 1],
-                          penalty_here[i + 1], penalty_temp[1]);
+            COST_FUNCT(query_val, subject_val[i + 1], penalty_here[i - 1],
+                       penalty_here[i + 1]);
       }
 #ifndef NV_DEBUG
-      penalty_here[SEGMENT_SIZE - 1] =
-          COST_FUNCTION(query_val, subject_val[SEGMENT_SIZE - 1],
-                        penalty_here[SEGMENT_SIZE - 2],
-                        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+      penalty_here[SEGMENT_SIZE - 1] = COST_FUNCT(
+          query_val, subject_val[SEGMENT_SIZE - 1],
+          penalty_here[SEGMENT_SIZE - 2], penalty_here[SEGMENT_SIZE - 1]);
 #else
-      penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-          query_val, subject_val[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
-          penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+      penalty_here[SEGMENT_SIZE - 1] =
+          COST_FUNCT(query_val, subject_val[SEGMENT_SIZE - 1],
+                     FLOAT2HALF(INFINITY), penalty_here[SEGMENT_SIZE - 1]);
 #endif
 
       /* new_query_val buffer is empty, reload */
@@ -255,7 +256,7 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
   val_t penalty_left = FLOAT2HALF(INFINITY);
   val_t penalty_diag = FLOAT2HALF(INFINITY);
   val_t penalty_here[SEGMENT_SIZE] = {FLOAT2HALF(0)};
-  val_t penalty_temp[2];
+  // val_t penalty_temp[2];
 
   /* each thread computes CELLS_PER_THREAD adjacent cells, get corresponding sig
    * values */
@@ -282,30 +283,28 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
   for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
 
     /* calculate CELLS_PER_THREAD cells */
-    penalty_temp[0] = penalty_here[0];
-    penalty_here[0] = COST_FUNCTION(query_val, subject_val[0], penalty_left,
-                                    penalty_here[0], penalty_diag);
+    // penalty_temp[0] = penalty_here[0];
+    penalty_here[0] = COST_FUNCT(query_val, subject_val[0], penalty_left,
+                                 penalty_here[0], penalty_diag);
 
     for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
-      penalty_temp[1] = penalty_here[i];
-      penalty_here[i] =
-          COST_FUNCTION(query_val, subject_val[i], penalty_here[i - 1],
-                        penalty_here[i], penalty_temp[0]);
+      // penalty_temp[1] = penalty_here[i];
+      penalty_here[i] = COST_FUNCT(query_val, subject_val[i],
+                                   penalty_here[i - 1], penalty_here[i]);
 
-      penalty_temp[0] = penalty_here[i + 1];
+      // penalty_temp[0] = penalty_here[i + 1];
       penalty_here[i + 1] =
-          COST_FUNCTION(query_val, subject_val[i + 1], penalty_here[i - 1],
-                        penalty_here[i + 1], penalty_temp[1]);
+          COST_FUNCT(query_val, subject_val[i + 1], penalty_here[i - 1],
+                     penalty_here[i + 1]);
     }
 #ifndef NV_DEBUG
-    penalty_here[SEGMENT_SIZE - 1] =
-        COST_FUNCTION(query_val, subject_val[SEGMENT_SIZE - 1],
-                      penalty_here[SEGMENT_SIZE - 2],
-                      penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+    penalty_here[SEGMENT_SIZE - 1] = COST_FUNCT(
+        query_val, subject_val[SEGMENT_SIZE - 1],
+        penalty_here[SEGMENT_SIZE - 2], penalty_here[SEGMENT_SIZE - 1]);
 #else
-    penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-        query_val, subject_val[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
-        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+    penalty_here[SEGMENT_SIZE - 1] =
+        COST_FUNCT(query_val, subject_val[SEGMENT_SIZE - 1],
+                   FLOAT2HALF(INFINITY), penalty_here[SEGMENT_SIZE - 1]);
 #endif
 
     /* new_query_val buffer is empty, reload */
@@ -347,10 +346,10 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
     /* initialize penalties */
     penalty_left = FLOAT2HALF(INFINITY);
     penalty_diag = FLOAT2HALF(INFINITY);
-    for (auto i = 0; i < SEGMENT_SIZE; i++)
-      penalty_here[i] = FLOAT2HALF(0);
-    for (auto i = 0; i < 2; i++)
-      penalty_temp[i] = FLOAT2HALF(INFINITY);
+    // for (auto i = 0; i < SEGMENT_SIZE; i++)
+    penalty_here[i] = FLOAT2HALF(0);
+    // for (auto i = 0; i < 2; i++)
+    //  penalty_temp[i] = FLOAT2HALF(INFINITY);
 
     /* load next WARP_SIZE query values from memory into new_query_val buffer */
     query_val = FLOAT2HALF(INFINITY);
@@ -374,30 +373,28 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
     for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
 
       /* calculate CELLS_PER_THREAD cells */
-      penalty_temp[0] = penalty_here[0];
-      penalty_here[0] = COST_FUNCTION(query_val, subject_val[0], penalty_left,
-                                      penalty_here[0], penalty_diag);
+      // penalty_temp[0] = penalty_here[0];
+      penalty_here[0] =
+          COST_FUNCT(query_val, subject_val[0], penalty_left, penalty_diag);
 
       for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
-        penalty_temp[1] = penalty_here[i];
-        penalty_here[i] =
-            COST_FUNCTION(query_val, subject_val[i], penalty_here[i - 1],
-                          penalty_here[i], penalty_temp[0]);
+        // penalty_temp[1] = penalty_here[i];
+        penalty_here[i] = COST_FUNCT(query_val, subject_val[i],
+                                     penalty_here[i - 1], penalty_here[i]);
 
-        penalty_temp[0] = penalty_here[i + 1];
+        // penalty_temp[0] = penalty_here[i + 1];
         penalty_here[i + 1] =
-            COST_FUNCTION(query_val, subject_val[i + 1], penalty_here[i - 1],
-                          penalty_here[i + 1], penalty_temp[1]);
+            COST_FUNCT(query_val, subject_val[i + 1], penalty_here[i - 1],
+                       penalty_here[i + 1]);
       }
 #ifndef NV_DEBUG
-      penalty_here[SEGMENT_SIZE - 1] =
-          COST_FUNCTION(query_val, subject_val[SEGMENT_SIZE - 1],
-                        penalty_here[SEGMENT_SIZE - 2],
-                        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+      penalty_here[SEGMENT_SIZE - 1] = COST_FUNCT(
+          query_val, subject_val[SEGMENT_SIZE - 1],
+          penalty_here[SEGMENT_SIZE - 2], penalty_here[SEGMENT_SIZE - 1]);
 #else
-      penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-          query_val, subject_val[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
-          penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+      penalty_here[SEGMENT_SIZE - 1] =
+          COST_FUNCT(query_val, subject_val[SEGMENT_SIZE - 1],
+                     FLOAT2HALF(INFINITY), penalty_here[SEGMENT_SIZE - 1]);
 #endif
 
       /* new_query_val buffer is empty, reload */
