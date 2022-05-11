@@ -6,5 +6,6 @@ Efficient CUDA implementation of the Dynamic Time Warp (DTW) algorithm. Details 
 Nanopore pre-requisites:
 -install hdf5
 -include file paths
--makefile edits & include lib path in mkefile
+-makefile edits & include lib path in makefile
+add hdf5 lib path to LD_LIBRARY_PATH
 
