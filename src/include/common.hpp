@@ -19,6 +19,8 @@ typedef float raw_t;
 #ifdef FAST5
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
+#else
+#define NUM_READS (BLOCK_NUM * STREAM_NUM * 30) // total number of reads
 #endif
 
 #define WARP_SIZE 32
@@ -30,7 +32,6 @@ typedef float raw_t;
 #define REF_LEN QUERY_LEN
 #define GROUP_SIZE WARP_SIZE
 #define CELLS_PER_THREAD SEGMENT_SIZE
-#define NUM_READS (BLOCK_NUM * STREAM_NUM * 30) // total number of reads
 
 #define REF_BATCH (REF_LEN / (SEGMENT_SIZE * WARP_SIZE))
 

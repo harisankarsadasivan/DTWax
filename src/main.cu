@@ -65,11 +65,6 @@ cudaStream_t stream_var[STREAM_NUM];
 
 int main(int argc, char **argv) {
 
-  /* count total cell updates */
-  std::cout << "We are going to process "
-            << (NUM_READS / 1000000000.0) * QUERY_LEN * REF_LEN
-            << " Giga Cell Updates (GCU)" << std::endl;
-
   // create host storage and buffers on devices
   value_ht *host_query,          // time series on CPU
       *host_dist,                // distance results on CPU
@@ -77,7 +72,38 @@ int main(int argc, char **argv) {
       *device_query[STREAM_NUM], // time series on GPU
       *device_dist[STREAM_NUM],  // distance results on GPU
       *device_ref;
-  raw_t *squiggle_data; // random data generated is stored here.
+  std::vector<raw_t> squiggle_data; // random data generated is stored here.
+  index_t no_of_reads; // counter to count number of reads to be processed
+
+  //-----------------------------------------------------------randomized
+  // squiggle data
+  // generation or load from ONT input
+  // file--------------------------------------//
+  TIMERSTART(generate_andOR_load_data)
+
+#ifndef FAST5
+  generate_cbf(squiggle_data, QUERY_LEN, NUM_READS);
+#else
+  std::cout << "Loading ONT " << ONT_FILE_FORMAT << " reads from " << argv[1]
+            << "\n";
+  load_from_fast5_folder(argv[1], squiggle_data, no_of_reads);
+  index_t NUM_READS = no_of_reads;
+#endif
+
+  ASSERT(cudaMallocHost(&host_query,
+                        sizeof(value_ht) * NUM_READS * QUERY_LEN)); /* input */
+#pragma omp parallel for
+  for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
+       i++) {
+    host_query[i] = FLOAT2HALF(squiggle_data[i]);
+  }
+  squiggle_data.clear();
+  TIMERSTOP(generate_andOR_load_data)
+
+  /* count total cell updates */
+  std::cout << "We are going to process "
+            << (NUM_READS / 1000000000.0) * QUERY_LEN * REF_LEN
+            << " Giga Cell Updates (GCU)" << std::endl;
 
   //-------------------------------------------------------mem
   // allocation----------------------------------------------------------//
@@ -85,11 +111,8 @@ int main(int argc, char **argv) {
 
   //--------------------------------------------------------host mem
   // allocation--------------------------------------------------//
-  ASSERT(cudaMallocHost(&host_query,
-                        sizeof(value_ht) * NUM_READS * QUERY_LEN)); /* input */
-  ASSERT(cudaMallocHost(&host_ref, sizeof(value_ht) * REF_LEN));    /* input */
-  ASSERT(cudaMallocHost(&squiggle_data,
-                        sizeof(raw_t) * NUM_READS * QUERY_LEN)); /* input */
+
+  ASSERT(cudaMallocHost(&host_ref, sizeof(value_ht) * REF_LEN)); /* input */
 
   ASSERT(
       cudaMallocHost(&host_dist, sizeof(value_ht) * NUM_READS)); /* results */
@@ -106,25 +129,6 @@ int main(int argc, char **argv) {
 
   TIMERSTOP(malloc)
 
-  //-----------------------------------------------------------squiggle data
-  // generation, type conversion, d2h copy target reference and clear some of
-  // host mem--------------------------------------//
-  TIMERSTART(generate_data)
-#ifndef FAST5
-  generate_cbf(squiggle_data, QUERY_LEN, NUM_READS);
-#else
-  std::cout << "Loading ONT " << ONT_FILE_FORMAT << " reads from " << argv[1]
-            << "\n";
-  load_from_fast5_folder(argv[1], squiggle_data);
-#endif
-
-#pragma omp parallel for
-  for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
-       i++) {
-    host_query[i] = FLOAT2HALF(squiggle_data[i]);
-  }
-
-  TIMERSTOP(generate_data)
   //----------re-arranging target reference for memory
   // coalescing-----------------//
   uint64_t k = 0;
@@ -141,7 +145,7 @@ int main(int argc, char **argv) {
       device_ref,
       &host_ref[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
       sizeof(value_ht) * REF_LEN, cudaMemcpyHostToDevice));
-  cudaFreeHost(squiggle_data);
+  // cudaFreeHost(squiggle_data);
   TIMERSTOP(generate_and_load_target)
 
   /*-------------------------------------------------------------- performs
@@ -182,15 +186,15 @@ int main(int argc, char **argv) {
    * output -----------------------------------------------------*/
 #ifdef NV_DEBUG
 #ifndef FP16
-  for (idxt j = 0; j < NUM_READS; j++) {
+  for (index_t j = 0; j < NUM_READS; j++) {
     std::cout << HALF2FLOAT(host_dist[j]) << " ";
   }
 #else
-  for (uint64_t j = 0; j < NUM_READS; j++) {
+  for (index_t j = 0; j < NUM_READS; j++) {
     std::cout << HALF2FLOAT(host_dist[j].x) << " ";
   }
   std::cout << std::endl;
-  for (uint64_t j = 0; j < NUM_READS; j++) {
+  for (index_t j = 0; j < NUM_READS; j++) {
     std::cout << HALF2FLOAT(host_dist[j].y) << " ";
   }
 

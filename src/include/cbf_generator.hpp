@@ -15,8 +15,8 @@
 
 #ifndef FP16
 
-void generate_cbf(value_t *data, index_t num_entries, index_t num_features,
-                  uint64_t seed = 42) {
+void generate_cbf(std::vector<raw_t> &data, index_t num_entries,
+                  index_t num_features, uint64_t seed = 42) {
 
   std::default_random_engine generator(seed);
   std::uniform_int_distribution<int> distribution(0, 255);
@@ -25,7 +25,7 @@ void generate_cbf(value_t *data, index_t num_entries, index_t num_features,
 
   for (index_t entry = 0; entry < num_entries * num_features; entry++) {
 
-    data[entry] = distribution(generator);
+    data.push_back(distribution(generator));
     // #ifdef NV_DEBUG
     //     data[entry] = entry % 10;
 
@@ -35,8 +35,8 @@ void generate_cbf(value_t *data, index_t num_entries, index_t num_features,
 
 #else
 template <typename raw_t>
-void generate_cbf(raw_t *data, index_t num_entries, index_t num_features,
-                  uint64_t seed = 42) {
+void generate_cbf(std::vector<raw_t> &data, index_t num_entries,
+                  index_t num_features, uint64_t seed = 42) {
 
   std::default_random_engine generator(seed);
   std::uniform_int_distribution<int> distribution(0, 255);
@@ -45,7 +45,7 @@ void generate_cbf(raw_t *data, index_t num_entries, index_t num_features,
 
   for (index_t entry = 0; entry < num_entries * num_features; entry++) {
 
-    data[entry] = (raw_t)distribution(generator);
+    data.push_back((raw_t)distribution(generator));
     // #ifdef NV_DEBUG
     //     data[entry] = entry % 10;
 
@@ -79,7 +79,8 @@ void read_fast5_from_folder(std::string path,
   closedir(dir);
 }
 
-void load_from_fast5_folder(std::string fn, raw_t *squiggle_data) {
+void load_from_fast5_folder(std::string fn, std::vector<raw_t> &squiggle_data,
+                            index_t &no_of_reads) {
 
   std::vector<std::string> file_queue;
   std::ifstream f(fn);
@@ -99,7 +100,7 @@ void load_from_fast5_folder(std::string fn, raw_t *squiggle_data) {
 
     std::vector<std::string> reads = fast5_get_multi_read_groups(f5_file);
 
-#pragma omp parallel for
+    // #pragma omp parallel for
     // check every read in ONT file
     for (size_t j = 0; j < reads.size(); j++) {
 
@@ -118,7 +119,7 @@ void load_from_fast5_folder(std::string fn, raw_t *squiggle_data) {
       data.channel_params = fast5_get_channel_params(f5_file, read_name);
 
       for (index_t itr = ADAPTER_LEN; itr < (QUERY_LEN + ADAPTER_LEN); itr++) {
-        squiggle_data[entry++] = data.rt.raw[itr];
+        squiggle_data.push_back(data.rt.raw[itr]);
       }
     }
 
@@ -128,7 +129,7 @@ void load_from_fast5_folder(std::string fn, raw_t *squiggle_data) {
             << " files read\n"
             << "Short reads exempted:: " << invalid_rds << std::endl;
   std::cout << "Valid reads loaded:: " << valid_rds << std::endl;
-  // no_of_reads = valid_rds;
+  no_of_reads = valid_rds;
 }
 #endif
 
