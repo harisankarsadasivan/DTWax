@@ -10,23 +10,45 @@ typedef int idxt;
 typedef float raw_t;
 
 //...............global variables..........................//
-#ifndef FP16
-#define SEGMENT_SIZE 32
+#ifdef FP16
+
+#include <cuda_fp16.h>
+typedef __half2 value_ht;
+#define FP_PIPES 2
+#define HALF2FLOAT(a) __half2float(a)
+#define FLOAT2HALF(a) __float2half2_rn(a)
+#define FIND_MIN(a, b) __hmin2(a, b)
+#define FMA(a, b, c) __hfma2(a, b, c)
+#define ADD(a, b) __hadd2(a, b)
+#define DIV(a, b) __h2div(a, b)
+#define SQRT(a) h2sqrt(a)
+
 #else
-#define SEGMENT_SIZE 32
+
+#define FP_PIPES 1
+#define FLOAT2HALF(a) a
+#define HALF2FLOAT(a) a
+typedef float value_ht;
+#define FIND_MIN(a, b) min(a, b)
+#define FMA(a, b, c) (a * b + c)
+#define ADD(a, b) (a + b)
+#define DIV(a, b) (a & (b - 1)) // make sure b is power of 2
+#define SQRT(a) sqrtf(a)        // a is to be float
 #endif
+
+#define WARP_SIZE 32
+#define LOG_WARP_SIZE 5
+#define QUERY_LEN 1024
+#define BLOCK_NUM (10000)
+#define STREAM_NUM 1
+#define SEGMENT_SIZE 32
 
 #ifdef FAST5
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
 #else
-#define NUM_READS (BLOCK_NUM * STREAM_NUM * 30) // total number of reads
+#define NUM_READS (BLOCK_NUM * STREAM_NUM * 1) // total number of reads
 #endif
-
-#define WARP_SIZE 32
-#define QUERY_LEN 1024
-#define BLOCK_NUM (108 * 16)
-#define STREAM_NUM 16
 
 //-----------------derived variables--------------------------//
 #define REF_LEN QUERY_LEN

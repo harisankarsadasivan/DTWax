@@ -9,6 +9,7 @@
 #include "../../fast5/nanopolish_fast5_io.cpp"
 #include "../../fast5/nanopolish_fast5_loader.cpp"
 #include <dirent.h>
+#include <math.h>
 #include <stdio.h>
 #include <sys/types.h>
 #endif
@@ -21,7 +22,7 @@ void generate_cbf(std::vector<raw_t> &data, index_t num_entries,
   std::default_random_engine generator(seed);
   std::uniform_int_distribution<int> distribution(0, 255);
 
-#pragma omp parallel for
+  //#pragma omp parallel for
 
   for (index_t entry = 0; entry < num_entries * num_features; entry++) {
 
@@ -41,7 +42,7 @@ void generate_cbf(std::vector<raw_t> &data, index_t num_entries,
   std::default_random_engine generator(seed);
   std::uniform_int_distribution<int> distribution(0, 255);
 
-#pragma omp parallel for
+  //#pragma omp parallel for
 
   for (index_t entry = 0; entry < num_entries * num_features; entry++) {
 
@@ -85,7 +86,7 @@ void load_from_fast5_folder(std::string fn, std::vector<raw_t> &squiggle_data,
   std::vector<std::string> file_queue;
   std::ifstream f(fn);
   std::string line;
-  static index_t invalid_rds = 0, valid_rds = 0, entry = 0;
+  static index_t invalid_rds = 0, valid_rds = 0;
 
   // read in list of all ONT input files
   read_fast5_from_folder(fn, file_queue);
@@ -102,6 +103,7 @@ void load_from_fast5_folder(std::string fn, std::vector<raw_t> &squiggle_data,
 
     // #pragma omp parallel for
     // check every read in ONT file
+    // std::cout << "Query from fast5:\n";
     for (size_t j = 0; j < reads.size(); j++) {
 
       assert(reads[j].find("read_") == 0);
@@ -109,7 +111,11 @@ void load_from_fast5_folder(std::string fn, std::vector<raw_t> &squiggle_data,
       Fast5Data data;
       std::string read_name = reads[j].substr(5);
       data.rt = fast5_get_raw_samples(f5_file, read_name, data.channel_params);
+
       if (data.rt.n < (QUERY_LEN + ADAPTER_LEN)) {
+        invalid_rds++;
+        continue;
+      } else if (isnan(data.rt.raw[ADAPTER_LEN])) { /// check if read is invalid
         invalid_rds++;
         continue;
       } else
@@ -119,15 +125,18 @@ void load_from_fast5_folder(std::string fn, std::vector<raw_t> &squiggle_data,
       data.channel_params = fast5_get_channel_params(f5_file, read_name);
 
       for (index_t itr = ADAPTER_LEN; itr < (QUERY_LEN + ADAPTER_LEN); itr++) {
-        squiggle_data.push_back(data.rt.raw[itr]);
+        squiggle_data.push_back((raw_t)data.rt.raw[itr]);
+        // std::cout << squiggle_data.back() << ",";
       }
+      // std::cout << "\n=================";
     }
 
     fast5_close(f5_file);
   }
   std::cout << file_queue.size() << " ONT " << ONT_FILE_FORMAT
             << " files read\n"
-            << "Short reads exempted:: " << invalid_rds << std::endl;
+            << "Short/invalid NaN reads exempted:: " << invalid_rds
+            << std::endl;
   std::cout << "Valid reads loaded:: " << valid_rds << std::endl;
   no_of_reads = valid_rds;
 }

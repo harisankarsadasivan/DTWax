@@ -8,24 +8,14 @@
 
 #include "include/DTW.hpp"
 #include "include/binary_IO.hpp"
-#include "include/cbf_generator.hpp"
 #include "include/common.hpp"
+#include "include/generate_load_squiggle.hpp"
 #include "include/hpc_helpers.hpp"
 
-using namespace FullDTW;
-
-#ifdef FP16
-#include <cuda_fp16.h>
-#define FLOAT2HALF(a) __float2half2_rn(a)
-#define HALF2FLOAT(a) __half2float(a)
-typedef __half2 value_ht;
-#define FP_PIPES 2
-#else
-#define FP_PIPES 1
-#define FLOAT2HALF(a) a
-#define HALF2FLOAT(a) a
-typedef float value_ht;
+#ifdef INCLUDE_NORMALIZER
+#include "include/normalizer.cu"
 #endif
+using namespace FullDTW;
 
 //------------------------------------------------------------time
 // macros-----------------------------------------------------//
@@ -72,33 +62,69 @@ int main(int argc, char **argv) {
       *device_query[STREAM_NUM], // time series on GPU
       *device_dist[STREAM_NUM],  // distance results on GPU
       *device_ref;
-  std::vector<raw_t> squiggle_data; // random data generated is stored here.
-  index_t no_of_reads; // counter to count number of reads to be processed
+  std::vector<raw_t>
+      squiggle_data; // squiggle data read/generated is stored here.
 
-  //-----------------------------------------------------------randomized
-  // squiggle data
-  // generation or load from ONT input
+  //-----------------------------------------------------------generate
+  // randomized squiggle data or load from ONT input
   // file--------------------------------------//
-  TIMERSTART(generate_andOR_load_data)
+  TIMERSTART(time_until_data_is_loaded)
 
 #ifndef FAST5
-  generate_cbf(squiggle_data, QUERY_LEN, NUM_READS);
+  generate_cbf(squiggle_data, QUERY_LEN,
+               NUM_READS); // generate randomized squiggle data
 #else
+  index_t no_of_reads; // counter to count number of reads to be processed
   std::cout << "Loading ONT " << ONT_FILE_FORMAT << " reads from " << argv[1]
             << "\n";
-  load_from_fast5_folder(argv[1], squiggle_data, no_of_reads);
+  load_from_fast5_folder(argv[1], squiggle_data,
+                         no_of_reads); // load from ONT input data folder
   index_t NUM_READS = no_of_reads;
 #endif
 
   ASSERT(cudaMallocHost(&host_query,
                         sizeof(value_ht) * NUM_READS * QUERY_LEN)); /* input */
-#pragma omp parallel for
+  //#pragma omp parallel for
+
+#ifdef INCLUDE_NORMALIZER
+  raw_t *raw_squiggle_array;
+
+  ASSERT(cudaMallocHost(&raw_squiggle_array,
+                        sizeof(value_ht) * NUM_READS * QUERY_LEN));
+
+  std::cout << "Query loaded:\n";
+  for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
+       i++) {
+    raw_squiggle_array[i] = squiggle_data[i];
+    std::cout << squiggle_data[i] << ",";
+  }
+  std::cout << "\n=================";
+
+  TIMERSTART(normalizer_kernel)
+  deviceReduceKernel<<<NUM_READS, QUERY_LEN>>>(raw_squiggle_array);
+  ASSERT(cudaDeviceSynchronize());
+  TIMERSTOP(normalizer_kernel)
+
+  std::cout << "Normalized half2 data:\n";
+  for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
+       i++) {
+    host_query[i] = FLOAT2HALF(raw_squiggle_array[i]);
+    std::cout << HALF2FLOAT(host_query[i].x) << ",";
+  }
+  std::cout << "\n=================";
+  cudaFreeHost(raw_squiggle_array);
+
+#else
+  // load squiggle data into host memory
+  std::cout << "Query loaded:\n";
   for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
        i++) {
     host_query[i] = FLOAT2HALF(squiggle_data[i]);
+    std::cout << squiggle_data[i] << ",";
   }
-  squiggle_data.clear();
-  TIMERSTOP(generate_andOR_load_data)
+  std::cout << "\n=================";
+#endif
+  TIMERSTOP(time_until_data_is_loaded)
 
   /* count total cell updates */
   std::cout << "We are going to process "
@@ -133,20 +159,24 @@ int main(int argc, char **argv) {
   // coalescing-----------------//
   uint64_t k = 0;
 
-  TIMERSTART(generate_and_load_target)
-  for (uint64_t i = 0; i < SEGMENT_SIZE; i++) {
+  TIMERSTART(load_target)
+  //#pragma omp parallel for
+  for (index_t i = 0; i < SEGMENT_SIZE; i++) {
 
-    for (uint64_t j = 0; j < WARP_SIZE; j++) {
-      host_ref[k++] = FLOAT2HALF(squiggle_data[i + (j * SEGMENT_SIZE)]);
+    for (index_t j = 0; j < WARP_SIZE; j++) {
+      host_ref[k] = host_query[i + (j * SEGMENT_SIZE)];
+      std::cout << HALF2FLOAT(host_ref[k].x) << ",";
+      k++;
     }
   }
+  squiggle_data.clear();
 
   ASSERT(cudaMemcpyAsync(
       device_ref,
       &host_ref[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
       sizeof(value_ht) * REF_LEN, cudaMemcpyHostToDevice));
   // cudaFreeHost(squiggle_data);
-  TIMERSTOP(generate_and_load_target)
+  TIMERSTOP(load_target)
 
   /*-------------------------------------------------------------- performs
    * memory I/O and  pairwise DTW
@@ -156,28 +186,45 @@ int main(int argc, char **argv) {
   // device---------------//
   int batch_count = NUM_READS / (BLOCK_NUM * STREAM_NUM);
 
-  for (int batch_id = 0; batch_id < batch_count; batch_id++) {
-    for (int stream_id = 0; stream_id < STREAM_NUM; stream_id++) {
-      //----h2d copy-------------//
-      ASSERT(cudaMemcpyAsync(
-          device_query[stream_id],
-          &host_query[(batch_id * STREAM_NUM * QUERY_LEN * BLOCK_NUM) +
-                      (stream_id * QUERY_LEN * BLOCK_NUM)],
-          sizeof(value_ht) * QUERY_LEN * BLOCK_NUM, cudaMemcpyHostToDevice,
-          stream_var[stream_id]));
+  if (batch_count > 0) {
+    for (int batch_id = 0; batch_id < batch_count; batch_id++) {
+      for (int stream_id = 0; stream_id < STREAM_NUM; stream_id++) {
+        //----h2d copy-------------//
+        ASSERT(cudaMemcpyAsync(
+            device_query[stream_id],
+            &host_query[(batch_id * STREAM_NUM * QUERY_LEN * BLOCK_NUM) +
+                        (stream_id * QUERY_LEN * BLOCK_NUM)],
+            sizeof(value_ht) * QUERY_LEN * BLOCK_NUM, cudaMemcpyHostToDevice,
+            stream_var[stream_id]));
 
-      //---------launch kernels------------//
-      distances<value_ht, index_t>(device_ref, device_query[stream_id],
-                                   device_dist[stream_id], BLOCK_NUM,
-                                   FLOAT2HALF(0), stream_var[stream_id]);
+        //---------launch kernels------------//
+        distances<value_ht, index_t>(device_ref, device_query[stream_id],
+                                     device_dist[stream_id], BLOCK_NUM,
+                                     FLOAT2HALF(0), stream_var[stream_id]);
 
-      //-----d2h copy--------------//
-      ASSERT(cudaMemcpyAsync(&host_dist[(batch_id * STREAM_NUM * BLOCK_NUM) +
-                                        (stream_id * BLOCK_NUM)],
-                             device_dist[stream_id],
-                             sizeof(value_ht) * BLOCK_NUM,
-                             cudaMemcpyDeviceToHost, stream_var[stream_id]));
+        //-----d2h copy--------------//
+        ASSERT(cudaMemcpyAsync(&host_dist[(batch_id * STREAM_NUM * BLOCK_NUM) +
+                                          (stream_id * BLOCK_NUM)],
+                               device_dist[stream_id],
+                               sizeof(value_ht) * BLOCK_NUM,
+                               cudaMemcpyDeviceToHost, stream_var[stream_id]));
+      }
     }
+  } else {
+
+    //----h2d copy-------------//
+    ASSERT(cudaMemcpyAsync(device_query[0], &host_query[0],
+                           sizeof(value_ht) * QUERY_LEN * NUM_READS,
+                           cudaMemcpyHostToDevice, stream_var[0]));
+
+    //---------launch kernels------------//
+    distances<value_ht, index_t>(device_ref, device_query[0], device_dist[0],
+                                 NUM_READS, FLOAT2HALF(0), stream_var[0]);
+
+    //-----d2h copy--------------//
+    ASSERT(cudaMemcpyAsync(&host_dist[0], device_dist[0],
+                           sizeof(value_ht) * NUM_READS, cudaMemcpyDeviceToHost,
+                           stream_var[0]));
   }
   ASSERT(cudaDeviceSynchronize());
   TIMERSTOP_CUDA(concurrent_kernel_launch)

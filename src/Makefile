@@ -1,6 +1,6 @@
 NVCC= nvcc
 LIBS = -lz -lhdf5 -I/home/hsadasivan/anaconda2/include -L/home/hsadasivan/anaconda2/lib
-NVCCFLAGS= -std=c++11 --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DNV_DEBUG -DFP16 -DFAST5
+NVCCFLAGS= -std=c++11 --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DNV_DEBUG -DFP16 -DINCLUDE_NORMALIZER#-DFAST5
 CXXFLAGS= -Xcompiler="-fopenmp -march=native" -O2#-DNV_DEBUG
 
 all: main
