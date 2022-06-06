@@ -31,7 +31,7 @@ typedef __half2 value_ht;
 typedef float value_ht;
 #define FIND_MIN(a, b) min(a, b)
 #define FMA(a, b, c) (a * b + c)
-#define ADD(a, b) (a + b)
+#define ADD(a, b) (a + b) gg
 #define DIV(a, b) (a & (b - 1)) // make sure b is power of 2
 #define SQRT(a) sqrtf(a)        // a is to be float
 #endif
@@ -39,7 +39,7 @@ typedef float value_ht;
 #define WARP_SIZE 32
 #define LOG_WARP_SIZE 5
 #define QUERY_LEN 1024
-#define BLOCK_NUM (10000)
+#define BLOCK_NUM (1)
 #define STREAM_NUM 1
 #define SEGMENT_SIZE 32
 

@@ -62,6 +62,7 @@ int main(int argc, char **argv) {
       *device_query[STREAM_NUM], // time series on GPU
       *device_dist[STREAM_NUM],  // distance results on GPU
       *device_ref;
+
   std::vector<raw_t>
       squiggle_data; // squiggle data read/generated is stored here.
 
@@ -87,6 +88,7 @@ int main(int argc, char **argv) {
   //#pragma omp parallel for
 
 #ifdef INCLUDE_NORMALIZER
+  float *bnScale, *bnBias;
   raw_t *raw_squiggle_array;
 
   ASSERT(cudaMallocHost(&raw_squiggle_array,
@@ -100,16 +102,23 @@ int main(int argc, char **argv) {
   }
   std::cout << "\n=================";
 
+  cudaMalloc(&bnScale, (QUERY_LEN * NUM_READS * sizeof(float)));
+  cudaMalloc(&bnBias, (QUERY_LEN * NUM_READS * sizeof(float)));
+  cudaMemset(bnScale, 1, (QUERY_LEN * NUM_READS * sizeof(float)));
+  cudaMemset(bnBias, 0, (QUERY_LEN * NUM_READS * sizeof(float)));
   TIMERSTART(normalizer_kernel)
-  deviceReduceKernel<<<NUM_READS, QUERY_LEN>>>(raw_squiggle_array);
+  // deviceReduceKernel<<<NUM_READS, QUERY_LEN>>>(raw_squiggle_array);
+  normalize(raw_squiggle_array, bnScale, bnBias);
   ASSERT(cudaDeviceSynchronize());
   TIMERSTOP(normalizer_kernel)
 
-  std::cout << "Normalized half2 data:\n";
+  cudaFree(bnScale);
+  cudaFree(bnBias);
+  std::cout << "Normalized data:\n";
   for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
        i++) {
     host_query[i] = FLOAT2HALF(raw_squiggle_array[i]);
-    std::cout << HALF2FLOAT(host_query[i].x) << ",";
+    std::cout << raw_squiggle_array[i] << ",";
   }
   std::cout << "\n=================";
   cudaFreeHost(raw_squiggle_array);
@@ -120,7 +129,7 @@ int main(int argc, char **argv) {
   for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
        i++) {
     host_query[i] = FLOAT2HALF(squiggle_data[i]);
-    std::cout << squiggle_data[i] << ",";
+    std::cout << host_query[i] << ",";
   }
   std::cout << "\n=================";
 #endif
@@ -146,6 +155,7 @@ int main(int argc, char **argv) {
   //-------------------------------------------------------------dev mem
   // allocation-------------------------------------------------//
   ASSERT(cudaMalloc(&device_ref, sizeof(value_ht) * REF_LEN));
+
   for (int stream_id = 0; stream_id < STREAM_NUM; stream_id++) {
     ASSERT(cudaMalloc(&device_query[stream_id],
                       (sizeof(value_ht) * BLOCK_NUM * QUERY_LEN)));
@@ -157,15 +167,15 @@ int main(int argc, char **argv) {
 
   //----------re-arranging target reference for memory
   // coalescing-----------------//
-  uint64_t k = 0;
 
   TIMERSTART(load_target)
+  uint64_t k = 0;
   //#pragma omp parallel for
   for (index_t i = 0; i < SEGMENT_SIZE; i++) {
 
     for (index_t j = 0; j < WARP_SIZE; j++) {
       host_ref[k] = host_query[i + (j * SEGMENT_SIZE)];
-      std::cout << HALF2FLOAT(host_ref[k].x) << ",";
+      // std::cout << HALF2FLOAT(host_ref[k].x) << ",";
       k++;
     }
   }
@@ -259,7 +269,7 @@ int main(int argc, char **argv) {
   cudaFree(device_ref);
   cudaFreeHost(host_query);
   cudaFreeHost(host_dist);
-
+  cudaFreeHost(host_ref);
   TIMERSTOP(free)
 
   return 0;
