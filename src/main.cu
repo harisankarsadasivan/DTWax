@@ -89,6 +89,13 @@ int main(int argc, char **argv) {
 
 #ifdef INCLUDE_NORMALIZER
   float *bnScale, *bnBias;
+  float bnScale_h[1024], bnBias_h[1024];
+
+  for (int i = 0; i < 1024; i++) {
+    bnScale_h[i] = 1.0f;
+    bnBias_h[i] = 0.0f;
+  }
+
   raw_t *raw_squiggle_array;
 
   ASSERT(cudaMallocHost(&raw_squiggle_array,
@@ -102,10 +109,23 @@ int main(int argc, char **argv) {
   }
   std::cout << "\n=================";
 
+  // cudaMallocHost(&bnScale_h, (QUERY_LEN * NUM_READS * sizeof(float)));
+  // cudaMallocHost(&bnBias_h, (QUERY_LEN * NUM_READS * sizeof(float)));
+
   cudaMalloc(&bnScale, (QUERY_LEN * NUM_READS * sizeof(float)));
   cudaMalloc(&bnBias, (QUERY_LEN * NUM_READS * sizeof(float)));
-  cudaMemset(bnScale, 1, (QUERY_LEN * NUM_READS * sizeof(float)));
-  cudaMemset(bnBias, 0, (QUERY_LEN * NUM_READS * sizeof(float)));
+
+  ASSERT(cudaMemcpyAsync(
+      bnScale,
+      &bnScale_h[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
+      sizeof(float) * 1024, cudaMemcpyHostToDevice));
+  ASSERT(cudaMemcpyAsync(
+      bnBias,
+      &bnBias_h[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
+      sizeof(float) * 1024, cudaMemcpyHostToDevice));
+
+  // cudaMemset(bnScale, 1, (QUERY_LEN * NUM_READS * sizeof(float)));
+  // cudaMemset(bnBias, 0, (QUERY_LEN * NUM_READS * sizeof(float)));
   TIMERSTART(normalizer_kernel)
   // deviceReduceKernel<<<NUM_READS, QUERY_LEN>>>(raw_squiggle_array);
   normalize(raw_squiggle_array, bnScale, bnBias);

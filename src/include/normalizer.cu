@@ -10,6 +10,7 @@ __inline__ void normalize(raw_t *raw_squiggle_array, const void *bnScale,
   int c = NUM_READS, h = QUERY_LEN; // nchw format for cudnn
   float alpha[1] = {1};
   float beta[1] = {0.0};
+  cudnnStatus_t status;
 
   raw_t *y, *x; // output,input array
   cudaMalloc(&y, sizeof(raw_t) * NUM_READS * QUERY_LEN);
@@ -35,13 +36,15 @@ __inline__ void normalize(raw_t *raw_squiggle_array, const void *bnScale,
 
   cudnnCreateTensorDescriptor(&bnScaleBiasMeanVarDesc);
   cudnnDeriveBNTensorDescriptor(bnScaleBiasMeanVarDesc, x_desc, mode);
-  cudnnSetTensor4dDescriptor(bnScaleBiasMeanVarDesc, format, dtype, 1, c, h, 1);
+  //   cudnnSetTensor4dDescriptor(bnScaleBiasMeanVarDesc, format, dtype, 1, c,
+  //   h, 1);
 
   // normalize
-  cudnnBatchNormalizationForwardTraining(
+  status = cudnnBatchNormalizationForwardTraining(
       handle_, mode, alpha, beta, x_desc, x, y_desc, y, bnScaleBiasMeanVarDesc,
-      bnScale, bnBias, 1.0 / (1.0 + h), NULL, NULL, 0, NULL, NULL);
-
+      bnScale, bnBias, 1.0 / (1.0 + h), NULL, NULL, 0.0001f, NULL, NULL);
+  cudaDeviceSynchronize();
+  std::cout << "cudann status: " << status << "\n";
   cudaMemcpy(
 
       &raw_squiggle_array[0], y, sizeof(raw_t) * NUM_READS * QUERY_LEN,

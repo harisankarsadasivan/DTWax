@@ -20,7 +20,7 @@ void generate_cbf(std::vector<raw_t> &data, index_t num_entries,
                   index_t num_features, uint64_t seed = 42) {
 
   std::default_random_engine generator(seed);
-  std::uniform_int_distribution<int> distribution(0, 255);
+  std::uniform_int_distribution<int> distribution(0, 8);
 
   //#pragma omp parallel for
 
