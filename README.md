@@ -8,3 +8,5 @@ sudo apt-get install libhdf5-dev zlib1g-dev
 -install hdf5 from h5fc
 add hdf5 lib path to LD_LIBRARY_PATH
 install hdf5 plugin from f5c and add export HDF5_PLUGIN_PATH="/home/hsadasivan/.local/hdf5/lib/plugin"
+
+cudnn--- intstall toolkit 11.6 and then do this from nvidia doc for 11.6.
