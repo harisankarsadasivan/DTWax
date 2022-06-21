@@ -11,44 +11,10 @@
 #include "include/common.hpp"
 #include "include/generate_load_squiggle.hpp"
 #include "include/hpc_helpers.hpp"
-
-#ifdef INCLUDE_NORMALIZER
 #include "include/normalizer.cu"
-#endif
+
 using namespace FullDTW;
 
-//------------------------------------------------------------time
-// macros-----------------------------------------------------//
-#define TIMERSTART_CUDA(label)                                                 \
-  cudaSetDevice(0);                                                            \
-  cudaEvent_t start##label, stop##label;                                       \
-  float time##label;                                                           \
-  cudaEventCreate(&start##label);                                              \
-  cudaEventCreate(&stop##label);                                               \
-  cudaEventRecord(start##label, 0);
-
-#define TIMERSTOP_CUDA(label)                                                  \
-  cudaSetDevice(0);                                                            \
-  cudaEventRecord(stop##label, 0);                                             \
-  cudaEventSynchronize(stop##label);                                           \
-  cudaEventElapsedTime(&time##label, start##label, stop##label);               \
-  std::cout << "TIMING: " << time##label << " ms "                             \
-            << ((QUERY_LEN / (time##label * 1e6)) * (REF_LEN)*NUM_READS *      \
-                FP_PIPES)                                                      \
-            << " GCUPS (" << #label << ")" << std::endl;
-//..........................................................other
-// macros.......................................................//
-#define ASSERT(ans)                                                            \
-  { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line,
-                      bool abort = true) {
-  if (code != cudaSuccess) {
-    fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
-            line);
-    if (abort)
-      exit(code);
-  }
-}
 //---------------------------------------------------------global
 // vars----------------------------------------------------------//
 cudaStream_t stream_var[STREAM_NUM];
@@ -63,107 +29,59 @@ int main(int argc, char **argv) {
       *device_dist[STREAM_NUM],  // distance results on GPU
       *device_ref;
 
-  std::vector<raw_t>
-      squiggle_data; // squiggle data read/generated is stored here.
+  raw_t *raw_array = NULL;
 
-  //-----------------------------------------------------------generate
-  // randomized squiggle data or load from ONT input
-  // file--------------------------------------//
   TIMERSTART(time_until_data_is_loaded)
 
-#ifndef FAST5
-  generate_cbf(squiggle_data, QUERY_LEN,
-               NUM_READS); // generate randomized squiggle data
-#else
-  index_t no_of_reads; // counter to count number of reads to be processed
-  std::cout << "Loading ONT " << ONT_FILE_FORMAT << " reads from " << argv[1]
-            << "\n";
-  load_from_fast5_folder(argv[1], squiggle_data,
-                         no_of_reads); // load from ONT input data folder
-  index_t NUM_READS = no_of_reads;
+  //*************************************************************LOAD FROM
+  // FILE********************************************************//
+  index_t NUM_READS; // counter to count number of reads to be processed
+  squiggle_loader *loader = new squiggle_loader;
+  loader->load_data(argv[1], raw_array,
+                    NUM_READS); // load from input ONT data folder with FAST5
+  ASSERT(cudaMallocHost(
+      &raw_array,
+      (sizeof(raw_t) *
+       (NUM_READS * QUERY_LEN)))); // host pinned memory for raw data from FAST5
+
+  loader->load_query(raw_array);
+
+  delete loader;
+
+  //****************************************************NORMALIZER****************************************//
+  // normalizer instance - does h2h pinned mem transfer, CUDNN setup and zscore
+  // normalization, normalized raw_t output is returned in same array as input
+  normalizer *NMZR = new normalizer;
+  TIMERSTART(normalizer_kernel)
+  NMZR->normalize(raw_array, NUM_READS);
+  TIMERSTOP(normalizer_kernel)
+  std::cout << "Normalizer processed  " << (QUERY_LEN * NUM_READS)
+            << " raw samples in this time\n";
+
+#ifdef NV_DEBUG
+  NMZR->print_normalized_query(raw_array, NUM_READS);
 #endif
 
+  delete NMZR;
+  // normalizartion completed
+
+  //****************************************************FLOAT to
+  //__half2****************************************//
   ASSERT(cudaMallocHost(&host_query,
                         sizeof(value_ht) * NUM_READS * QUERY_LEN)); /* input */
-  //#pragma omp parallel for
-
-#ifdef INCLUDE_NORMALIZER
-  float *bnScale, *bnBias;
-  float bnScale_h[1024], bnBias_h[1024];
-
-  for (int i = 0; i < 1024; i++) {
-    bnScale_h[i] = 1.0f;
-    bnBias_h[i] = 0.0f;
-  }
-
-  raw_t *raw_squiggle_array;
-
-  ASSERT(cudaMallocHost(&raw_squiggle_array,
-                        sizeof(value_ht) * NUM_READS * QUERY_LEN));
-
-  std::cout << "Query loaded:\n";
-  for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
-       i++) {
-    raw_squiggle_array[i] = squiggle_data[i];
-    std::cout << squiggle_data[i] << ",";
-  }
-  std::cout << "\n=================";
-
-  // cudaMallocHost(&bnScale_h, (QUERY_LEN * NUM_READS * sizeof(float)));
-  // cudaMallocHost(&bnBias_h, (QUERY_LEN * NUM_READS * sizeof(float)));
-
-  cudaMalloc(&bnScale, (QUERY_LEN * NUM_READS * sizeof(float)));
-  cudaMalloc(&bnBias, (QUERY_LEN * NUM_READS * sizeof(float)));
-
-  ASSERT(cudaMemcpyAsync(
-      bnScale,
-      &bnScale_h[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-      sizeof(float) * 1024, cudaMemcpyHostToDevice));
-  ASSERT(cudaMemcpyAsync(
-      bnBias,
-      &bnBias_h[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-      sizeof(float) * 1024, cudaMemcpyHostToDevice));
-
-  // cudaMemset(bnScale, 1, (QUERY_LEN * NUM_READS * sizeof(float)));
-  // cudaMemset(bnBias, 0, (QUERY_LEN * NUM_READS * sizeof(float)));
-  TIMERSTART(normalizer_kernel)
-  // deviceReduceKernel<<<NUM_READS, QUERY_LEN>>>(raw_squiggle_array);
-  normalize(raw_squiggle_array, bnScale, bnBias);
-  ASSERT(cudaDeviceSynchronize());
-  TIMERSTOP(normalizer_kernel)
-
-  cudaFree(bnScale);
-  cudaFree(bnBias);
   std::cout << "Normalized data:\n";
-  for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
-       i++) {
-    host_query[i] = FLOAT2HALF(raw_squiggle_array[i]);
-    std::cout << raw_squiggle_array[i] << ",";
+  for (index_t i = 0; i < NUM_READS; i++) {
+    for (index_t j = 0; j < QUERY_LEN; j++) {
+      host_query[(i * NUM_READS + j)] =
+          FLOAT2HALF(raw_array[(i * NUM_READS + j)]);
+    }
   }
-  std::cout << "\n=================";
-  cudaFreeHost(raw_squiggle_array);
-
-#else
-  // load squiggle data into host memory
-  std::cout << "Query loaded:\n";
-  for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN * (int64_t)NUM_READS);
-       i++) {
-    host_query[i] = FLOAT2HALF(squiggle_data[i]);
-    std::cout << host_query[i] << ",";
-  }
-  std::cout << "\n=================";
-#endif
+  cudaFreeHost(raw_array);
   TIMERSTOP(time_until_data_is_loaded)
 
-  /* count total cell updates */
-  std::cout << "We are going to process "
-            << (NUM_READS / 1000000000.0) * QUERY_LEN * REF_LEN
-            << " Giga Cell Updates (GCU)" << std::endl;
-
-  //-------------------------------------------------------mem
-  // allocation----------------------------------------------------------//
+  //****************************************************MEM
+  // allocation****************************************//
   TIMERSTART(malloc)
-
   //--------------------------------------------------------host mem
   // allocation--------------------------------------------------//
 
@@ -185,12 +103,13 @@ int main(int argc, char **argv) {
 
   TIMERSTOP(malloc)
 
-  //----------re-arranging target reference for memory
-  // coalescing-----------------//
+  //****************************************************Target ref
+  // re-organization for better mem coalescing & target
+  // loading****************************************//
 
   TIMERSTART(load_target)
   uint64_t k = 0;
-  //#pragma omp parallel for
+#pragma omp parallel for
   for (index_t i = 0; i < SEGMENT_SIZE; i++) {
 
     for (index_t j = 0; j < WARP_SIZE; j++) {
@@ -199,19 +118,17 @@ int main(int argc, char **argv) {
       k++;
     }
   }
-  squiggle_data.clear();
 
   ASSERT(cudaMemcpyAsync(
       device_ref,
       &host_ref[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
       sizeof(value_ht) * REF_LEN, cudaMemcpyHostToDevice));
-  // cudaFreeHost(squiggle_data);
+
   TIMERSTOP(load_target)
 
-  /*-------------------------------------------------------------- performs
-   * memory I/O and  pairwise DTW
-   * computation----------------------------------------- */
-  TIMERSTART_CUDA(concurrent_kernel_launch)
+  //****************************************************Mem I/O and DTW
+  // computation****************************************//
+  TIMERSTART_CUDA(concurrent_DTW_kernel_launch)
   //-------------total batches of concurrent workload to & fro
   // device---------------//
   int batch_count = NUM_READS / (BLOCK_NUM * STREAM_NUM);
@@ -257,7 +174,7 @@ int main(int argc, char **argv) {
                            stream_var[0]));
   }
   ASSERT(cudaDeviceSynchronize());
-  TIMERSTOP_CUDA(concurrent_kernel_launch)
+  TIMERSTOP_CUDA(concurrent_DTW_kernel_launch)
 
   /* -----------------------------------------------------------------print
    * output -----------------------------------------------------*/

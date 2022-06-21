@@ -2,64 +2,50 @@
 #define CBF_GENERATOR_HPP
 
 #include "common.hpp"
+#include "hpc_helpers.hpp"
 #include <cstdint>
 #include <random>
 
-#ifdef FAST5 // read input squiggles from FAST5 file
 #include "../../fast5/nanopolish_fast5_io.cpp"
 #include "../../fast5/nanopolish_fast5_loader.cpp"
 #include <dirent.h>
 #include <math.h>
 #include <stdio.h>
 #include <sys/types.h>
+
+class squiggle_loader {
+public:
+  void load_data(std::string fn, value_ht *host_query, index_t &no_of_reads);
+  void load_query(raw_t *raw_array);
+
+private:
+  std::vector<raw_t>
+      squiggle_vector; // squiggle data read/generated is stored here.
+  index_t invalid_rds = 0, valid_rds = 0;
+  void read_fast5_from_folder(std::string path,
+                              std::vector<std::string> &file_queue);
+};
+
+void squiggle_loader::load_query(raw_t *raw_array) {
+#ifdef NV_DEBUG
+  std::cout << "Query loaded:\n";
 #endif
+  for (index_t i = 0; i < (valid_rds * QUERY_LEN); i++) {
 
-#ifndef FP16
+    raw_array[i] = squiggle_vector[i];
+#ifdef NV_DEBUG
 
-void generate_cbf(std::vector<raw_t> &data, index_t num_entries,
-                  index_t num_features, uint64_t seed = 42) {
-
-  std::default_random_engine generator(seed);
-  std::uniform_int_distribution<int> distribution(0, 8);
-
-  //#pragma omp parallel for
-
-  for (index_t entry = 0; entry < num_entries * num_features; entry++) {
-
-    data.push_back(distribution(generator));
-    // #ifdef NV_DEBUG
-    //     data[entry] = entry % 10;
-
-    // #endif
+    std::cout << raw_array[i] << ",";
+#endif
   }
+  std::cout << "\n=================\n";
 }
 
-#else
-template <typename raw_t>
-void generate_cbf(std::vector<raw_t> &data, index_t num_entries,
-                  index_t num_features, uint64_t seed = 42) {
+void squiggle_loader::read_fast5_from_folder(
+    std::string path, std::vector<std::string> &file_queue) {
 
-  std::default_random_engine generator(seed);
-  std::uniform_int_distribution<int> distribution(0, 255);
-
-  //#pragma omp parallel for
-
-  for (index_t entry = 0; entry < num_entries * num_features; entry++) {
-
-    data.push_back((raw_t)distribution(generator));
-    // #ifdef NV_DEBUG
-    //     data[entry] = entry % 10;
-
-    // #endif
-  }
-}
-
-#endif
-
-#ifdef FAST5
-
-void read_fast5_from_folder(std::string path,
-                            std::vector<std::string> &file_queue) {
+  std::cout << "Loading ONT " << ONT_FILE_FORMAT << " reads from " << path
+            << "\n";
   struct dirent *entry;
   DIR *dir = opendir(&path[0]);
   if (dir == NULL) {
@@ -80,13 +66,13 @@ void read_fast5_from_folder(std::string path,
   closedir(dir);
 }
 
-void load_from_fast5_folder(std::string fn, std::vector<raw_t> &squiggle_data,
-                            index_t &no_of_reads) {
+void squiggle_loader::load_data(std::string fn,
+
+                                raw_t *raw_array, index_t &no_of_reads) {
 
   std::vector<std::string> file_queue;
   std::ifstream f(fn);
   std::string line;
-  static index_t invalid_rds = 0, valid_rds = 0;
 
   // read in list of all ONT input files
   read_fast5_from_folder(fn, file_queue);
@@ -96,6 +82,7 @@ void load_from_fast5_folder(std::string fn, std::vector<raw_t> &squiggle_data,
   for (size_t i = 0; i < file_queue.size(); ++i) {
     fast5_file f5_file = fast5_open(file_queue[i]);
     if (!fast5_is_open(f5_file)) {
+      // data.is_valid = false;
       continue;
     }
 
@@ -109,37 +96,42 @@ void load_from_fast5_folder(std::string fn, std::vector<raw_t> &squiggle_data,
       assert(reads[j].find("read_") == 0);
 
       Fast5Data data;
+      data.rt.raw = NULL;
+      data.rt.n = 0;
       std::string read_name = reads[j].substr(5);
+      data.channel_params = fast5_get_channel_params(
+          f5_file, read_name); // This has to be done prior to accessing raw
+                               // data !!!Dont remove.
       data.rt = fast5_get_raw_samples(f5_file, read_name, data.channel_params);
 
       if (data.rt.n < (QUERY_LEN + ADAPTER_LEN)) {
         invalid_rds++;
         continue;
-      } else if (isnan(data.rt.raw[ADAPTER_LEN])) { /// check if read is invalid
-        invalid_rds++;
-        continue;
-      } else
+      }
+
+      else
+
         valid_rds++;
-      data.is_valid = true;
-      data.read_name = read_name;
-      data.channel_params = fast5_get_channel_params(f5_file, read_name);
 
       for (index_t itr = ADAPTER_LEN; itr < (QUERY_LEN + ADAPTER_LEN); itr++) {
-        squiggle_data.push_back((raw_t)data.rt.raw[itr]);
-        // std::cout << squiggle_data.back() << ",";
+        squiggle_vector.push_back((raw_t)data.rt.raw[itr]);
+#ifdef NV_DEBUG
+        std::cout << squiggle_vector.back() << ",";
+#endif
       }
-      // std::cout << "\n=================";
+#ifdef NV_DEBUG
+
+      std::cout << "\n=================\n";
+#endif
     }
 
     fast5_close(f5_file);
   }
   std::cout << file_queue.size() << " ONT " << ONT_FILE_FORMAT
             << " files read\n"
-            << "Short/invalid NaN reads exempted:: " << invalid_rds
-            << std::endl;
-  std::cout << "Valid reads loaded:: " << valid_rds << std::endl;
+            << "Short/invalid reads exempted:: " << invalid_rds << std::endl;
+  std::cout << "Valid reads loaded :: " << valid_rds << std::endl;
   no_of_reads = valid_rds;
 }
-#endif
 
 #endif

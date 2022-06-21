@@ -64,6 +64,7 @@ __global__ void DTW(val_t *subjects, val_t *query, val_t *dist,
     subject_val[i] = subjects[thread_id + i * WARP_SIZE];
     printf("subject_val[%0d]=%0f\n", i, HALF2FLOAT(subject_val[i]));
   }
+
   /* calculate full matrix in wavefront parallel manner, multiple cells per
    * thread */
   for (idxt wave = 1; wave <= NUM_WAVES; wave++) {

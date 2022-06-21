@@ -50,6 +50,38 @@
   }
 #endif
 
+//------------------------------------------------------------time
+// macros-----------------------------------------------------//
+#define TIMERSTART_CUDA(label)                                                 \
+  cudaSetDevice(0);                                                            \
+  cudaEvent_t start##label, stop##label;                                       \
+  float time##label;                                                           \
+  cudaEventCreate(&start##label);                                              \
+  cudaEventCreate(&stop##label);                                               \
+  cudaEventRecord(start##label, 0);
+
+#define TIMERSTOP_CUDA(label)                                                  \
+  cudaSetDevice(0);                                                            \
+  cudaEventRecord(stop##label, 0);                                             \
+  cudaEventSynchronize(stop##label);                                           \
+  cudaEventElapsedTime(&time##label, start##label, stop##label);               \
+  std::cout << "TIMING: " << time##label << " ms "                             \
+            << ((QUERY_LEN / (time##label * 1e6)) * (REF_LEN)*NUM_READS *      \
+                FP_PIPES)                                                      \
+            << " GCUPS (" << #label << ")" << std::endl;
+//..........................................................other
+// macros.......................................................//
+#define ASSERT(ans)                                                            \
+  { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line,
+                      bool abort = true) {
+  if (code != cudaSuccess) {
+    fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
+            line);
+    if (abort)
+      exit(code);
+  }
+}
 // safe division
 #define SDIV(x, y) (((x) + (y)-1) / (y))
 

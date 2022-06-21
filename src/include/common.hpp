@@ -39,16 +39,12 @@ typedef float value_ht;
 #define WARP_SIZE 32
 #define LOG_WARP_SIZE 5
 #define QUERY_LEN 1024
-#define BLOCK_NUM (1)
+#define BLOCK_NUM (2)
 #define STREAM_NUM 1
 #define SEGMENT_SIZE 32
 
-#ifdef FAST5
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
-#else
-#define NUM_READS (BLOCK_NUM * STREAM_NUM * 1) // total number of reads
-#endif
 
 //-----------------derived variables--------------------------//
 #define REF_LEN QUERY_LEN
