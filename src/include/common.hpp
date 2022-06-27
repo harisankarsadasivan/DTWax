@@ -1,6 +1,5 @@
 #ifndef COMMON_HPP
 #define COMON_HPP
-#endif
 
 //-------------global datatypes---------------------------//
 typedef float value_t;   // data type for values
@@ -36,9 +35,12 @@ typedef float value_ht;
 #define SQRT(a) sqrtf(a)        // a is to be float
 #endif
 
+#define KMER_LEN 6
 #define WARP_SIZE 32
 #define LOG_WARP_SIZE 5
 #define QUERY_LEN 1024
+// #define REF_LEN 48502
+#define REF_LEN 1024 // change this to original length later
 #define BLOCK_NUM (2)
 #define STREAM_NUM 1
 #define SEGMENT_SIZE 32
@@ -47,7 +49,7 @@ typedef float value_ht;
 #define ONT_FILE_FORMAT "fast5"
 
 //-----------------derived variables--------------------------//
-#define REF_LEN QUERY_LEN
+
 #define GROUP_SIZE WARP_SIZE
 #define CELLS_PER_THREAD SEGMENT_SIZE
 
@@ -57,3 +59,5 @@ typedef float value_ht;
 #define NUM_WAVES (QUERY_LEN + (REF_LEN - 1) / (CELLS_PER_THREAD * REF_BATCH))
 #define RESULT_THREAD_ID (WARP_SIZE - 1)
 #define RESULT_REG ((QUERY_LEN - 1) % CELLS_PER_THREAD)
+
+#endif

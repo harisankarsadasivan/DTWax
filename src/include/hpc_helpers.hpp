@@ -3,6 +3,9 @@
 
 #include <cstdint>
 #include <iostream>
+#include <stdio.h>
+#include <string>
+#include <unistd.h>
 
 #ifndef __CUDACC__
 #include <chrono>
@@ -85,4 +88,25 @@ inline void gpuAssert(cudaError_t code, const char *file, int line,
 // safe division
 #define SDIV(x, y) (((x) + (y)-1) / (y))
 
+// void input_parser(int argc, char *argv[], std::string &ip_path,
+//                   std::string &model_file, std::string &ref_file) {
+//   // int opt;
+//   // std::cout << argc;
+//   // while ((opt = getopt(argc, argv, “abc :”)) != -1) {
+//   //   switch (opt) {
+//   //   case ‘i’:
+//   //     ip_path = optarg;
+//   //     std::cout << "input path is " << ip_path << "\n";
+//   //     break;
+//   //   case ‘k’:
+//   //     model_file = optarg;
+//   //     std::cout << "model file is " << model_file << "\n";
+//   //     break;
+//   //   case ‘r’:
+//   //     ref_file = optarg;
+//   //     std::cout << "fasta reference file is " << ref_file << "\n";
+//   //     break;
+//   //   }
+//   // }
+// }
 #endif

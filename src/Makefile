@@ -12,7 +12,7 @@ all: main
 main: main.cu
 	$(NVCC) $(NVCCFLAGS) $(CXXFLAGS) $(LIBS) main.cu -o main
 format:
-	clang-format -i main.cu include/*.hpp include/*.cu
+	clang-format -i main.cu include/*.hpp include/*.cu include/*cpp
 clean:
 		rm -rf main 
 $(LIBHDF5):
