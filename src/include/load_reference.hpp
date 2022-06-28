@@ -2,6 +2,7 @@
 #define LOAD_REFERENCE
 
 #include "common.hpp"
+#include "datatypes.hpp"
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -16,7 +17,7 @@ public:
   void read_kmer_model(std::string fname);
   value_ht *ref_coeff1 = NULL,
            ref_coeff2 = NULL; // coeff1 is 1/stdev and coeff2 is mean/stdev
-  void load_ref_coeffs(value_ht *ref_coeff1, value_ht *ref_coeff2);
+  void load_ref_coeffs(reference_coefficients *ref);
 
 private:
   std::string fwd_reference, rev_reference;
@@ -26,16 +27,15 @@ private:
 };
 
 // load reference genome's coefficients and ref length
-void load_reference::load_ref_coeffs(value_ht *ref_coeff1,
-                                     value_ht *ref_coeff2) {
+void load_reference::load_ref_coeffs(reference_coefficients *ref) {
   for (index_t i = 0; i < fwd_reference.length() - KMER_LEN + 1; i++) {
     // std::cout << fwd_reference.substr(i, KMER_LEN) << ",";
     for (std::map<std::string, std::tuple<raw_t, raw_t>>::iterator itr =
              kmer_model.begin();
          itr != kmer_model.end(); ++itr) {
       if (fwd_reference.substr(i, KMER_LEN) == itr->first) {
-        ref_coeff1[i] = FLOAT2HALF(std::get<0>(itr->second));
-        ref_coeff2[i] = FLOAT2HALF(std::get<1>(itr->second));
+        ref[i].coeff1 = FLOAT2HALF(std::get<0>(itr->second));
+        ref[i].coeff2 = FLOAT2HALF(std::get<1>(itr->second));
       }
     }
   }

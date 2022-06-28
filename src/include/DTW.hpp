@@ -3,12 +3,13 @@
 #ifdef FP16
 #include <cuda_fp16.h>
 #endif
+#include "datatypes.hpp"
 namespace FullDTW {
 
 #include "DTW.cu"
 
 template <typename val_t, typename index_t>
-__host__ void distances(val_t *ref, val_t *query, val_t *dists,
+__host__ void distances(reference_coefficients *ref, val_t *query, val_t *dists,
                         index_t num_entries, val_t thresh,
                         cudaStream_t stream) {
 

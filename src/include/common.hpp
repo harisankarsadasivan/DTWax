@@ -1,13 +1,6 @@
 #ifndef COMMON_HPP
 #define COMON_HPP
 
-//-------------global datatypes---------------------------//
-typedef float value_t;   // data type for values
-typedef int64_t index_t; // data type for indices
-typedef int8_t label_t;  // data type for label
-typedef int idxt;
-typedef float raw_t;
-
 //...............global variables..........................//
 #ifdef FP16
 

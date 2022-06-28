@@ -5,13 +5,14 @@
 #include <cstdint>
 #include <iostream>
 
+#include "include/common.hpp"
+#include "include/datatypes.hpp"
 #include <stdio.h>
 #include <string>
 #include <unistd.h>
 
 #include "include/DTW.hpp"
 #include "include/binary_IO.hpp"
-#include "include/common.hpp"
 #include "include/generate_load_squiggle.hpp"
 #include "include/hpc_helpers.hpp"
 #include "include/load_reference.hpp"
@@ -34,15 +35,11 @@ int main(int argc, char **argv) {
       *device_query[STREAM_NUM], // time series on GPU
       *device_dist[STREAM_NUM];  // distance results on GPU
 
-  typedef struct {
-    value_ht *coeff1, *coeff2;
-
-  } REF_COEFFS;
-  REF_COEFFS h_ref_coeffs,
-      d_ref_coeffs; // struct stores reference genome's coeffs for DTW
+  reference_coefficients *h_ref_coeffs,
+      *d_ref_coeffs; // struct stores reference genome's coeffs for DTW
   raw_t *raw_array = NULL;
 
-  //****************************************************Target ref
+  //****************************************************Target ref loading &
   // re-organization for better mem coalescing & target
   // loading****************************************//
 
@@ -53,13 +50,11 @@ int main(int argc, char **argv) {
 
   REF_LD->ref_loader(ref_file);
   REF_LD->read_kmer_model(model_file);
-  ASSERT(cudaMallocManaged(
-      &(h_ref_coeffs.coeff1),
-      (sizeof(value_ht) * (REF_LEN)))); // host pinned memory for reference
-  ASSERT(cudaMallocManaged(
-      &(h_ref_coeffs.coeff2),
-      (sizeof(value_ht) * (REF_LEN)))); // host pinned memory for reference
-  REF_LD->load_ref_coeffs(h_ref_coeffs.coeff1, h_ref_coeffs.coeff2);
+  ASSERT(cudaMallocManaged(&h_ref_coeffs,
+                           (sizeof(reference_coefficients) *
+                            (REF_LEN)))); // host pinned memory for reference
+
+  REF_LD->load_ref_coeffs(h_ref_coeffs);
   delete REF_LD;
 
   uint64_t k = 0;
@@ -70,35 +65,30 @@ int main(int argc, char **argv) {
     for (index_t i = 0; i < SEGMENT_SIZE; i++) {
 
       for (index_t j = 0; j < WARP_SIZE; j++) {
-        h_ref_coeffs.coeff1[k] =
-            h_ref_coeffs.coeff1[i + (j * SEGMENT_SIZE) +
-                                (l * SEGMENT_SIZE * WARP_SIZE)];
-        h_ref_coeffs.coeff2[k] =
-            h_ref_coeffs.coeff2[i + (j * SEGMENT_SIZE) +
-                                (l * SEGMENT_SIZE * WARP_SIZE)];
+        h_ref_coeffs[k].coeff1 = h_ref_coeffs[i + (j * SEGMENT_SIZE) +
+                                              (l * SEGMENT_SIZE * WARP_SIZE)]
+                                     .coeff1;
+        h_ref_coeffs[k].coeff2 = h_ref_coeffs[i + (j * SEGMENT_SIZE) +
+                                              (l * SEGMENT_SIZE * WARP_SIZE)]
+                                     .coeff2;
         // std::cout << HALF2FLOAT(host_ref[k].x) << ",";
         k++;
       }
     }
   }
 
-  ASSERT(cudaMalloc(&(d_ref_coeffs.coeff1), sizeof(value_ht) * REF_LEN));
-  ASSERT(cudaMalloc(&(d_ref_coeffs.coeff2), sizeof(value_ht) * REF_LEN));
+  ASSERT(
+      cudaMalloc(&(d_ref_coeffs), (sizeof(reference_coefficients) * REF_LEN)));
   ASSERT(cudaMemcpyAsync(
-      d_ref_coeffs.coeff1,
-      h_ref_coeffs.coeff1, //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-      sizeof(value_ht) * REF_LEN, cudaMemcpyHostToDevice));
-  ASSERT(cudaMemcpyAsync(
-      d_ref_coeffs.coeff2,
-      h_ref_coeffs.coeff2, //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-      sizeof(value_ht) * REF_LEN, cudaMemcpyHostToDevice));
+      d_ref_coeffs,
+      h_ref_coeffs, //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
+      (sizeof(reference_coefficients) * REF_LEN), cudaMemcpyHostToDevice));
 
   TIMERSTOP(load_target)
 
-  TIMERSTART(time_until_data_is_loaded)
-
   //*************************************************************LOAD FROM
   // FILE********************************************************//
+  TIMERSTART(load_data)
   index_t NUM_READS; // counter to count number of reads to be
                      // processed + reference length
   squiggle_loader *loader = new squiggle_loader;
@@ -143,7 +133,7 @@ int main(int argc, char **argv) {
     }
   }
   cudaFreeHost(raw_array);
-  TIMERSTOP(time_until_data_is_loaded)
+  TIMERSTOP(load_data)
 
   //****************************************************MEM
   // allocation****************************************//
@@ -187,8 +177,7 @@ int main(int argc, char **argv) {
             stream_var[stream_id]));
 
         //---------launch kernels------------//
-        distances<value_ht, index_t>(d_ref_coeffs.coeff1,
-                                     device_query[stream_id],
+        distances<value_ht, index_t>(d_ref_coeffs, device_query[stream_id],
                                      device_dist[stream_id], BLOCK_NUM,
                                      FLOAT2HALF(0), stream_var[stream_id]);
 
@@ -208,9 +197,8 @@ int main(int argc, char **argv) {
                            cudaMemcpyHostToDevice, stream_var[0]));
 
     //---------launch kernels------------//
-    distances<value_ht, index_t>(d_ref_coeffs.coeff1, device_query[0],
-                                 device_dist[0], NUM_READS, FLOAT2HALF(0),
-                                 stream_var[0]);
+    distances<value_ht, index_t>(d_ref_coeffs, device_query[0], device_dist[0],
+                                 NUM_READS, FLOAT2HALF(0), stream_var[0]);
 
     //-----d2h copy--------------//
     ASSERT(cudaMemcpyAsync(&host_dist[0], device_dist[0],
@@ -250,8 +238,8 @@ int main(int argc, char **argv) {
 
   cudaFreeHost(host_query);
   cudaFreeHost(host_dist);
-  cudaFree(h_ref_coeffs.coeff1);
-  cudaFree(h_ref_coeffs.coeff2);
+  cudaFree(h_ref_coeffs);
+  cudaFree(d_ref_coeffs);
   TIMERSTOP(free)
 
   return 0;
