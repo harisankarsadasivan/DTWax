@@ -8,8 +8,8 @@ typedef int8_t label_t;  // data type for label
 typedef int idxt;
 typedef float raw_t;
 
-typedef struct reference_coefficients {
+typedef struct ref_coefficients {
   value_ht coeff1, coeff2;
-};
+} reference_coefficients;
 
 #endif

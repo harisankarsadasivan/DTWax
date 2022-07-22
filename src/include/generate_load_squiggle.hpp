@@ -112,7 +112,9 @@ void squiggle_loader::load_data(std::string fn,
       else
 
         valid_rds++;
-
+#ifdef NV_DEBUG
+      std::cout << read_name << "\n";
+#endif
       for (index_t itr = ADAPTER_LEN; itr < (QUERY_LEN + ADAPTER_LEN); itr++) {
         squiggle_vector.push_back((raw_t)data.rt.raw[itr]);
 #ifdef NV_DEBUG

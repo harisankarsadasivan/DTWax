@@ -4,7 +4,9 @@
 #include "common.hpp"
 #include "datatypes.hpp"
 #include <algorithm>
+#include <cmath>
 #include <fstream>
+// #include <iomanip>
 #include <iostream>
 #include <map>
 #include <string>
@@ -20,7 +22,8 @@ public:
   void load_ref_coeffs(reference_coefficients *ref);
 
 private:
-  std::string fwd_reference, rev_reference;
+  std::string fwd_reference, rev_reference,
+      reference; // reference is concatenation of fwd and reverse
   std::map<std::string, std::tuple<raw_t, raw_t>>
       kmer_model; // maps 1/stdev and mean/stdev to kmer
   void complement(std::string &DNAseq);
@@ -28,16 +31,69 @@ private:
 
 // load reference genome's coefficients and ref length
 void load_reference::load_ref_coeffs(reference_coefficients *ref) {
-  for (index_t i = 0; i < fwd_reference.length() - KMER_LEN + 1; i++) {
-    // std::cout << fwd_reference.substr(i, KMER_LEN) << ",";
-    for (std::map<std::string, std::tuple<raw_t, raw_t>>::iterator itr =
-             kmer_model.begin();
-         itr != kmer_model.end(); ++itr) {
-      if (fwd_reference.substr(i, KMER_LEN) == itr->first) {
-        ref[i].coeff1 = FLOAT2HALF(std::get<0>(itr->second));
-        ref[i].coeff2 = FLOAT2HALF(std::get<1>(itr->second));
+  std::string target[2] = {fwd_reference, rev_reference};
+  idxt start_idx[2] = {0, REF_LEN / 2};
+
+  index_t ref_len = REF_LEN / 2;
+  for (idxt j = 0; j < 2; j++) {
+    raw_t mean1 = 0, stdev1 = 0, mean2 = 0, stdev2 = 0;
+
+    // calculates mean and stdev
+    for (index_t i = 0; i < ref_len; i++) {
+      // std::cout << fwd_reference.substr(i, KMER_LEN) << ",";
+      for (std::map<std::string, std::tuple<raw_t, raw_t>>::iterator itr =
+               kmer_model.begin();
+           itr != kmer_model.end(); ++itr) {
+        if (target[j].substr(i, KMER_LEN) == itr->first) {
+          mean1 += std::get<0>(itr->second);
+          mean2 += std::get<1>(itr->second);
+          stdev1 =
+              stdev1 + (std::get<0>(itr->second)) * (std::get<0>(itr->second));
+          stdev2 =
+              stdev2 + (std::get<1>(itr->second)) * (std::get<1>(itr->second));
+          break;
+        }
       }
     }
+
+    mean1 = mean1 / ref_len;
+    mean2 = mean2 / ref_len;
+    stdev1 = stdev1 / ref_len;
+    stdev2 = stdev2 / ref_len;
+    stdev1 = sqrt(stdev1 - (mean1 * mean1));
+    stdev2 = sqrt(stdev2 - (mean2 * mean2));
+    std::cout << "print norm vars:" << mean1 << "," << mean2 << "," << stdev1
+              << "," << stdev2 << "\n";
+
+#ifdef NV_DEBUG
+    std::cout << "Printing mean and stdev of time series before normalizing "
+                 "squiggle ref coefficients: "
+              << mean1 << ", " << stdev1 << ", " << mean2 << ", " << stdev2
+              << "\n";
+#endif
+    float coeff1, coeff2;
+    // z-score normalize the reference coefficients
+    for (index_t i = 0; i < ref_len; i++) {
+      // std::cout << fwd_reference.substr(i, KMER_LEN) << ",";
+      for (std::map<std::string, std::tuple<raw_t, raw_t>>::iterator itr =
+               kmer_model.begin();
+           itr != kmer_model.end(); ++itr) {
+        if (target[j].substr(i, KMER_LEN) == itr->first) {
+          coeff1 = (std::get<0>(itr->second) - mean1) / stdev1;
+          coeff2 = (std::get<1>(itr->second) - mean2) / stdev2;
+#ifdef NV_DEBUG
+          std::cout << "[ " << std::get<0>(itr->second) << " ,"
+                    << std::get<1>(itr->second) << " ], ";
+          // std::cout << coeff1 << ", " << coeff2 << "\n";
+#endif
+          ref[start_idx[j] + i].coeff1 = FLOAT2HALF(coeff1);
+          ref[start_idx[j] + i].coeff2 = FLOAT2HALF(1 / (2 * coeff2));
+        }
+      }
+    }
+#ifdef NV_DEBUG
+    std::cout << "\nPrinting end\n";
+#endif
   }
 }
 
@@ -68,24 +124,28 @@ void load_reference::read_kmer_model(std::string fname) {
   while (std::getline(f, line)) {
     std::string kmer;
     raw_t curr_mean, curr_stdev;
+
     std::istringstream ss(line);
+
     ss >> kmer >> curr_mean >> curr_stdev;
+    // std::cout << std::setprecision(8) << curr_mean << " ,";
     kmer_model.insert(std::make_pair(
-        kmer, std::make_tuple((1 / curr_stdev), (curr_mean / curr_stdev))));
+        kmer, std::make_tuple((curr_mean), (curr_stdev * curr_stdev))));
+    // std::make_tuple((1 / curr_stdev), (-1.0f * curr_mean / curr_stdev))));
   }
   // for
   // debugging:
   //   prints kmer to mean and stdev
   //       map
-  // std::cout << "kmer\t"
-  //           << "1/stdev\t"
-  //           << "mean/stdev\n";
-  // for (std::map<std::string, std::tuple<raw_t, raw_t>>::iterator itr =
-  //          kmer_model.begin();
-  //      itr != kmer_model.end(); ++itr) {
-  //   std::cout << itr->first << '\t' << std::get<0>(itr->second) << '\t'
-  //             << std::get<1>(itr->second) << '\n';
-  // }
+  std::cout << "kmer\t"
+            << "mean\t"
+            << "variance\n";
+  for (std::map<std::string, std::tuple<raw_t, raw_t>>::iterator itr =
+           kmer_model.begin();
+       itr != kmer_model.end(); ++itr) {
+    std::cout << itr->first << '\t' << std::get<0>(itr->second) << '\t'
+              << std::get<1>(itr->second) << '\n';
+  }
 }
 
 // loads a single entry basecalled reference from FASTA file
@@ -132,8 +192,10 @@ void load_reference::ref_loader(std::string fname) {
     std::cerr << "Invalid FASTA entry in '" << fname << "'. Bailing out."
               << std::endl;
   }
-  fwd_reference = fwd_reference.substr(0, 1024);
-  rev_reference = rev_reference.substr(0, 1024);
+  // fwd_reference = fwd_reference.substr(0, REF_LEN / 2);
+  // rev_reference = rev_reference.substr(0, REF_LEN / 2);
+
+  reference = fwd_reference + rev_reference; // concatenated reference
   // std::cout << fwd_reference.length() << "\n";
 }
 

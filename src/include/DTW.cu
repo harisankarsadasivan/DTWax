@@ -255,6 +255,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   val_t penalty_diag = FLOAT2HALF(INFINITY);
   val_t penalty_here[SEGMENT_SIZE] = {FLOAT2HALF(0)};
   val_t penalty_temp[2];
+  val_t min_segment = FLOAT2HALF(INFINITY); // finds min of segment for sDTW
 
   /* each thread computes CELLS_PER_THREAD adjacent cells, get corresponding sig
    * values */
@@ -282,35 +283,28 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
     /* calculate CELLS_PER_THREAD cells */
     penalty_temp[0] = penalty_here[0];
-    penalty_here[0] =
-        FMA((query_val - ref_coeff1[0]), (query_val - ref_coeff1[0]),
-            FIND_MIN(penalty_left, FIND_MIN(penalty_here[0], penalty_diag)));
+    penalty_here[0] = COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
+                                    penalty_here[0], penalty_diag);
 
     for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
       penalty_temp[1] = penalty_here[i];
       penalty_here[i] =
-          FMA((query_val - ref_coeff1[i]), (query_val - ref_coeff1[i]),
-              FIND_MIN(penalty_here[i - 1],
-                       FIND_MIN(penalty_here[i], penalty_temp[0])));
+          COST_FUNCTION(query_val, ref_coeff1[i], penalty_here[i - 1],
+                        penalty_here[i], penalty_temp[0]);
 
       penalty_temp[0] = penalty_here[i + 1];
       penalty_here[i + 1] =
-          FMA((query_val - ref_coeff1[i + 1]), (query_val - ref_coeff1[i + 1]),
-              FIND_MIN(penalty_here[i - 1],
-                       FIND_MIN(penalty_here[i + 1], penalty_temp[1])));
+          COST_FUNCTION(query_val, ref_coeff1[i + 1], penalty_here[i - 1],
+                        penalty_here[i + 1], penalty_temp[1]);
     }
 #ifndef NV_DEBUG
-    penalty_here[SEGMENT_SIZE - 1] = FMA(
-        (query_val - ref_coeff1[SEGMENT_SIZE - 1]),
-        (query_val - ref_coeff1[SEGMENT_SIZE - 1]),
-        FIND_MIN(penalty_here[SEGMENT_SIZE - 2],
-                 FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
+    penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
+        query_val, ref_coeff1[SEGMENT_SIZE - 1], penalty_here[SEGMENT_SIZE - 2],
+        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
 #else
-    penalty_here[SEGMENT_SIZE - 1] = FMA(
-        (query_val - ref_coeff1[SEGMENT_SIZE - 1]),
-        (query_val - ref_coeff1[SEGMENT_SIZE - 1]),
-        FIND_MIN(FLOAT2HALF(INFINITY),
-                 FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
+    penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
+        query_val, ref_coeff1[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
+        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
 #endif
 
     /* new_query_val buffer is empty, reload */
@@ -334,6 +328,13 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     if ((wave >= WARP_SIZE) && (thread_id == RESULT_THREAD_ID)) {
       penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
     }
+    // Find min of segment and then shuffle up for sDTW
+    if (wave >= QUERY_LEN) {
+      for (idxt i = 0; i < SEGMENT_SIZE; i++) {
+        min_segment = FIND_MIN(min_segment, penalty_here[i]);
+      }
+      min_segment = __shfl_up_sync(ALL, min_segment, 1);
+    }
   }
 
   /* return result */
@@ -341,8 +342,11 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   if ((thread_id == RESULT_THREAD_ID) && (REF_BATCH == 1)) {
     // printf("@@@result_threadId=%0ld\n",RESULT_THREAD_ID);
 
-    dist[block_id] =
-        penalty_here[RESULT_REG] > thresh ? FLOAT2HALF(0) : FLOAT2HALF(1);
+    // dist[block_id] =
+    //     penalty_here[RESULT_REG] > thresh ? FLOAT2HALF(0) : FLOAT2HALF(1);
+    dist[block_id] = HALF2FLOAT(min_segment);
+    printf("score=%0f,min_segment=%0f\n", penalty_here[RESULT_REG],
+           min_segment);
     return;
   }
 
@@ -384,35 +388,29 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
       /* calculate CELLS_PER_THREAD cells */
       penalty_temp[0] = penalty_here[0];
-      penalty_here[0] =
-          FMA((query_val - ref_coeff1[0]), (query_val - ref_coeff1[0]),
-              FIND_MIN(penalty_left, FIND_MIN(penalty_here[0], penalty_diag)));
+      penalty_here[0] = COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
+                                      penalty_here[0], penalty_diag);
 
       for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
         penalty_temp[1] = penalty_here[i];
         penalty_here[i] =
-            FMA((query_val - ref_coeff1[i]), (query_val - ref_coeff1[i]),
-                FIND_MIN(penalty_here[i - 1],
-                         FIND_MIN(penalty_here[i], penalty_temp[0])));
+            COST_FUNCTION(query_val, ref_coeff1[i], penalty_here[i - 1],
+                          penalty_here[i], penalty_temp[0]);
 
         penalty_temp[0] = penalty_here[i + 1];
-        penalty_here[i + 1] = FMA(
-            (query_val - ref_coeff1[i + 1]), (query_val - ref_coeff1[i + 1]),
-            FIND_MIN(penalty_here[i - 1],
-                     FIND_MIN(penalty_here[i + 1], penalty_temp[1])));
+        penalty_here[i + 1] =
+            COST_FUNCTION(query_val, ref_coeff1[i + 1], penalty_here[i - 1],
+                          penalty_here[i + 1], penalty_temp[1]);
       }
 #ifndef NV_DEBUG
-      penalty_here[SEGMENT_SIZE - 1] = FMA(
-          (query_val - ref_coeff1[SEGMENT_SIZE - 1]),
-          (query_val - ref_coeff1[SEGMENT_SIZE - 1]),
-          FIND_MIN(penalty_here[SEGMENT_SIZE - 2],
-                   FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
+      penalty_here[SEGMENT_SIZE - 1] =
+          COST_FUNCTION(query_val, ref_coeff1[SEGMENT_SIZE - 1],
+                        penalty_here[SEGMENT_SIZE - 2],
+                        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
 #else
-      penalty_here[SEGMENT_SIZE - 1] = FMA(
-          (query_val - ref_coeff1[SEGMENT_SIZE - 1]),
-          (query_val - ref_coeff1[SEGMENT_SIZE - 1]),
-          FIND_MIN(FLOAT2HALF(INFINITY),
-                   FIND_MIN(penalty_here[SEGMENT_SIZE - 1], penalty_temp[0])));
+      penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
+          query_val, ref_coeff1[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
+          penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
 #endif
 
       /* new_query_val buffer is empty, reload */
@@ -436,13 +434,21 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       if ((wave >= WARP_SIZE) && (thread_id == RESULT_THREAD_ID)) {
         penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
       }
+      // Find min of segment and then shuffle up for sDTW
+      if (wave >= QUERY_LEN) {
+        for (idxt i = 0; i < SEGMENT_SIZE; i++) {
+          min_segment = FIND_MIN(min_segment, penalty_here[i]);
+        }
+        min_segment = __shfl_up_sync(ALL, min_segment, 1);
+      }
     }
     /* return result */
     if ((thread_id == RESULT_THREAD_ID) && (ref_batch == (REF_BATCH - 1))) {
       // printf("@@@result_threadId=%0ld\n",RESULT_THREAD_ID);
 
-      dist[block_id] =
-          penalty_here[RESULT_REG] > thresh ? FLOAT2HALF(0) : FLOAT2HALF(1);
+      // dist[block_id] =
+      //     penalty_here[RESULT_REG] > thresh ? FLOAT2HALF(0) : FLOAT2HALF(1);
+      dist[block_id] = HALF2FLOAT(min_segment);
 
       return;
     }

@@ -23,7 +23,7 @@ typedef __half2 value_ht;
 typedef float value_ht;
 #define FIND_MIN(a, b) min(a, b)
 #define FMA(a, b, c) (a * b + c)
-#define ADD(a, b) (a + b) gg
+#define ADD(a, b) (a + b)
 #define DIV(a, b) (a & (b - 1)) // make sure b is power of 2
 #define SQRT(a) sqrtf(a)        // a is to be float
 #endif

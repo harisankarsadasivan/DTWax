@@ -106,9 +106,11 @@ int main(int argc, char **argv) {
   //****************************************************NORMALIZER****************************************//
   // normalizer instance - does h2h pinned mem transfer, CUDNN setup andzscore
   // normalization, normalized raw_t output is returned in same array as input
-  normalizer *NMZR = new normalizer;
+  normalizer *NMZR = new normalizer; 
   TIMERSTART(normalizer_kernel)
-  NMZR->normalize(raw_array, NUM_READS);
+  std::cout << "rawarray testing:" << (raw_array[0]) << "\n";
+  NMZR->normalize(raw_array, NUM_READS, QUERY_LEN);
+  std::cout << "rawarray testing:" << (raw_array[0]) << "\n";
   TIMERSTOP(normalizer_kernel)
   std::cout << "Normalizer processed  " << (QUERY_LEN * NUM_READS)
             << " raw samples in this time\n";
@@ -130,8 +132,10 @@ int main(int argc, char **argv) {
     for (index_t j = 0; j < QUERY_LEN; j++) {
       host_query[(i * NUM_READS + j)] =
           FLOAT2HALF(raw_array[(i * NUM_READS + j)]);
+      std::cout << host_query[(i * NUM_READS + j)] << ",";
     }
   }
+  std::cout << "\n=================\n";
   cudaFreeHost(raw_array);
   TIMERSTOP(load_data)
 
