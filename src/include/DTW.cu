@@ -232,7 +232,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 /*----------------------------------subsequence
  * DTW--------------------------------*/
 
-#else //{
+#else  //{
 template <typename index_t, typename val_t>
 __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
                     index_t num_entries, val_t thresh) {
@@ -276,6 +276,8 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   for (idxt i = 0; i < SEGMENT_SIZE; i++) {
     ref_coeff1[i] = ref[thread_id + i * WARP_SIZE].coeff1;
     ref_coeff2[i] = ref[thread_id + i * WARP_SIZE].coeff2;
+    printf("tid= %0ld, ref_coeff1[%0d]=%0f\n", thread_id, i,
+           HALF2FLOAT(ref_coeff1[i]));
   }
   /* calculate full matrix in wavefront parallel manner, multiple cells per
    * thread */
@@ -283,8 +285,16 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
     /* calculate CELLS_PER_THREAD cells */
     penalty_temp[0] = penalty_here[0];
-    penalty_here[0] = COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
-                                    penalty_here[0], penalty_diag);
+
+    // sDTW logic
+    if (thread_id != 0) {
+      penalty_here[0] = COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
+                                      penalty_here[0], penalty_diag);
+    } else {
+      penalty_here[0] = ADD(
+          penalty_here[0], COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
+                                         penalty_here[0], penalty_diag));
+    }
 
     for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
       penalty_temp[1] = penalty_here[i];
@@ -297,15 +307,15 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
           COST_FUNCTION(query_val, ref_coeff1[i + 1], penalty_here[i - 1],
                         penalty_here[i + 1], penalty_temp[1]);
     }
-#ifndef NV_DEBUG
+    // #ifndef NV_DEBUG
     penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
         query_val, ref_coeff1[SEGMENT_SIZE - 1], penalty_here[SEGMENT_SIZE - 2],
         penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
-#else
-    penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-        query_val, ref_coeff1[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
-        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
-#endif
+    // #else
+    //     penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
+    //         query_val, ref_coeff1[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
+    //         penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+    // #endif
 
     /* new_query_val buffer is empty, reload */
     if ((wave & (WARP_SIZE - 1)) == 0) {
@@ -345,8 +355,8 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     // dist[block_id] =
     //     penalty_here[RESULT_REG] > thresh ? FLOAT2HALF(0) : FLOAT2HALF(1);
     dist[block_id] = HALF2FLOAT(min_segment);
-    printf("score=%0f,min_segment=%0f\n", penalty_here[RESULT_REG],
-           min_segment);
+    printf("min_segment=%0f, tid=%0ld, blockid=%0ld\n", min_segment, thread_id,
+           block_id);
     return;
   }
 
@@ -388,8 +398,17 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
       /* calculate CELLS_PER_THREAD cells */
       penalty_temp[0] = penalty_here[0];
-      penalty_here[0] = COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
-                                      penalty_here[0], penalty_diag);
+
+      // sDTW logic
+      if (thread_id != 0) {
+        penalty_here[0] = COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
+                                        penalty_here[0], penalty_diag);
+      } else {
+        penalty_here[0] =
+            ADD(penalty_here[0],
+                COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
+                              penalty_here[0], penalty_diag));
+      }
 
       for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
         penalty_temp[1] = penalty_here[i];
@@ -402,16 +421,17 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
             COST_FUNCTION(query_val, ref_coeff1[i + 1], penalty_here[i - 1],
                           penalty_here[i + 1], penalty_temp[1]);
       }
-#ifndef NV_DEBUG
+      // #ifndef NV_DEBUG
       penalty_here[SEGMENT_SIZE - 1] =
           COST_FUNCTION(query_val, ref_coeff1[SEGMENT_SIZE - 1],
                         penalty_here[SEGMENT_SIZE - 2],
                         penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
-#else
-      penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-          query_val, ref_coeff1[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
-          penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
-#endif
+      // #else
+      //       penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
+      //           query_val, ref_coeff1[SEGMENT_SIZE - 1],
+      //           FLOAT2HALF(INFINITY), penalty_here[SEGMENT_SIZE - 1],
+      //           penalty_temp[0]);
+      // #endif
 
       /* new_query_val buffer is empty, reload */
       if ((wave & (WARP_SIZE - 1)) == 0) {

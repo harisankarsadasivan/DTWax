@@ -30,7 +30,7 @@ void normalizer::print_normalized_query(raw_t *raw_array, index_t NUM_READS) {
   std::cout << "Normalized query:\n";
   for (index_t i = 0; i < NUM_READS; i++) {
     for (index_t j = 0; j < QUERY_LEN; j++) {
-      std::cout << raw_array[(i * NUM_READS + j)] << ",";
+      std::cout << raw_array[(i * QUERY_LEN + j)] << ",";
     }
     std::cout << "\n";
   }

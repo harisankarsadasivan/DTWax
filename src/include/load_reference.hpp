@@ -82,12 +82,11 @@ void load_reference::load_ref_coeffs(reference_coefficients *ref) {
           coeff1 = (std::get<0>(itr->second) - mean1) / stdev1;
           coeff2 = (std::get<1>(itr->second) - mean2) / stdev2;
 #ifdef NV_DEBUG
-          std::cout << "[ " << std::get<0>(itr->second) << " ,"
-                    << std::get<1>(itr->second) << " ], ";
+          std::cout << "[ " << coeff1 << " ," << coeff2 << " ], ";
           // std::cout << coeff1 << ", " << coeff2 << "\n";
 #endif
           ref[start_idx[j] + i].coeff1 = FLOAT2HALF(coeff1);
-          ref[start_idx[j] + i].coeff2 = FLOAT2HALF(1 / (2 * coeff2));
+          ref[start_idx[j] + i].coeff2 = FLOAT2HALF(1 / (2 * coeff2 * coeff2));
         }
       }
     }
@@ -129,8 +128,8 @@ void load_reference::read_kmer_model(std::string fname) {
 
     ss >> kmer >> curr_mean >> curr_stdev;
     // std::cout << std::setprecision(8) << curr_mean << " ,";
-    kmer_model.insert(std::make_pair(
-        kmer, std::make_tuple((curr_mean), (curr_stdev * curr_stdev))));
+    kmer_model.insert(
+        std::make_pair(kmer, std::make_tuple((curr_mean), (curr_stdev))));
     // std::make_tuple((1 / curr_stdev), (-1.0f * curr_mean / curr_stdev))));
   }
   // for

@@ -35,8 +35,10 @@ int main(int argc, char **argv) {
       *device_query[STREAM_NUM], // time series on GPU
       *device_dist[STREAM_NUM];  // distance results on GPU
 
-  reference_coefficients *h_ref_coeffs,
-      *d_ref_coeffs; // struct stores reference genome's coeffs for DTW
+  reference_coefficients *h_ref_coeffs, *d_ref_coeffs,
+      *h_ref_coeffs_tmp; // struct stores reference genome's coeffs for DTW;
+                         // *tmp is before restructuring for better mem
+                         // coalescing
   raw_t *raw_array = NULL;
 
   //****************************************************Target ref loading &
@@ -50,32 +52,31 @@ int main(int argc, char **argv) {
 
   REF_LD->ref_loader(ref_file);
   REF_LD->read_kmer_model(model_file);
+  ASSERT(cudaMallocManaged(&h_ref_coeffs_tmp,
+                           (sizeof(reference_coefficients) *
+                            (REF_LEN)))); // host pinned memory for reference
   ASSERT(cudaMallocManaged(&h_ref_coeffs,
                            (sizeof(reference_coefficients) *
                             (REF_LEN)))); // host pinned memory for reference
+  REF_LD->load_ref_coeffs(h_ref_coeffs_tmp);
 
-  REF_LD->load_ref_coeffs(h_ref_coeffs);
   delete REF_LD;
 
   uint64_t k = 0;
 
 #pragma omp parallel for
-  for (index_t l = 0; l < REF_LEN; l += (SEGMENT_SIZE * WARP_SIZE)) {
 
-    for (index_t i = 0; i < SEGMENT_SIZE; i++) {
+  for (index_t i = 0; i < SEGMENT_SIZE; i++) {
 
-      for (index_t j = 0; j < WARP_SIZE; j++) {
-        h_ref_coeffs[k].coeff1 = h_ref_coeffs[i + (j * SEGMENT_SIZE) +
-                                              (l * SEGMENT_SIZE * WARP_SIZE)]
-                                     .coeff1;
-        h_ref_coeffs[k].coeff2 = h_ref_coeffs[i + (j * SEGMENT_SIZE) +
-                                              (l * SEGMENT_SIZE * WARP_SIZE)]
-                                     .coeff2;
-        // std::cout << HALF2FLOAT(host_ref[k].x) << ",";
-        k++;
-      }
+    for (index_t j = 0; j < WARP_SIZE; j++) {
+      h_ref_coeffs[i * SEGMENT_SIZE + j].coeff1 =
+          h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff1;
+      h_ref_coeffs[i * SEGMENT_SIZE + j].coeff2 =
+          h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff2;
+      // std::cout << HALF2FLOAT(host_ref[k].x) << ",";
     }
   }
+  cudaFree(h_ref_coeffs_tmp); // delete the tmp array
 
   ASSERT(
       cudaMalloc(&(d_ref_coeffs), (sizeof(reference_coefficients) * REF_LEN)));
@@ -94,6 +95,8 @@ int main(int argc, char **argv) {
   squiggle_loader *loader = new squiggle_loader;
   loader->load_data(ip_path, raw_array,
                     NUM_READS); // load from input ONT data folder with FAST5
+
+  NUM_READS = 1; //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!lkdnsknefkwnef
   ASSERT(cudaMallocHost(
       &raw_array,
       (sizeof(raw_t) *
@@ -106,11 +109,11 @@ int main(int argc, char **argv) {
   //****************************************************NORMALIZER****************************************//
   // normalizer instance - does h2h pinned mem transfer, CUDNN setup andzscore
   // normalization, normalized raw_t output is returned in same array as input
-  normalizer *NMZR = new normalizer; 
+  normalizer *NMZR = new normalizer;
   TIMERSTART(normalizer_kernel)
-  std::cout << "rawarray testing:" << (raw_array[0]) << "\n";
+
   NMZR->normalize(raw_array, NUM_READS, QUERY_LEN);
-  std::cout << "rawarray testing:" << (raw_array[0]) << "\n";
+
   TIMERSTOP(normalizer_kernel)
   std::cout << "Normalizer processed  " << (QUERY_LEN * NUM_READS)
             << " raw samples in this time\n";
@@ -130,9 +133,9 @@ int main(int argc, char **argv) {
   std::cout << "Normalized data:\n";
   for (index_t i = 0; i < NUM_READS; i++) {
     for (index_t j = 0; j < QUERY_LEN; j++) {
-      host_query[(i * NUM_READS + j)] =
-          FLOAT2HALF(raw_array[(i * NUM_READS + j)]);
-      std::cout << host_query[(i * NUM_READS + j)] << ",";
+      host_query[(i * QUERY_LEN + j)] =
+          FLOAT2HALF(raw_array[(i * QUERY_LEN + j)]);
+      std::cout << host_query[(i * QUERY_LEN + j)] << ",";
     }
   }
   std::cout << "\n=================\n";
@@ -168,6 +171,8 @@ int main(int argc, char **argv) {
   //-------------total batches of concurrent workload to & fro
   // device---------------//
   int batch_count = NUM_READS / (BLOCK_NUM * STREAM_NUM);
+  std::cout << "Batch count: " << batch_count << " num_reads:" << NUM_READS
+            << "\n";
 
   if (batch_count > 0) {
     for (int batch_id = 0; batch_id < batch_count; batch_id++) {

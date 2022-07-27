@@ -132,7 +132,7 @@ void squiggle_loader::load_data(std::string fn,
   std::cout << file_queue.size() << " ONT " << ONT_FILE_FORMAT
             << " files read\n"
             << "Short/invalid reads exempted:: " << invalid_rds << std::endl;
-  std::cout << "Valid reads loaded :: " << valid_rds << std::endl;
+  std::cout << "Valid reads (NUM_READS) loaded :: " << valid_rds << std::endl;
   no_of_reads = valid_rds;
 }
 
