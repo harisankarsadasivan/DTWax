@@ -14,8 +14,8 @@
 namespace cg = cooperative_groups;
 #define ALL 0xFFFFFFFF
 
-#define COST_FUNCTION(q, r, l, t, d)                                           \
-  FMA(FMA(r, FLOAT2HALF(-1), q), FMA(r, FLOAT2HALF(-1), q),                    \
+#define COST_FUNCTION(q, r1, r2, l, t, d)                                      \
+  FMA(FMA(FMA(r1, FLOAT2HALF(-1), q), FMA(r1, FLOAT2HALF(-1), q), 0), r2,      \
       FIND_MIN(l, FIND_MIN(t, d)))
 
 #ifndef SDTW
@@ -73,29 +73,31 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
     /* calculate CELLS_PER_THREAD cells */
     penalty_temp[0] = penalty_here[0];
-    penalty_here[0] = COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
-                                    penalty_here[0], penalty_diag);
+    penalty_here[0] =
+        COST_FUNCTION(query_val, ref_coeff1[0], ref_coeff2[0], penalty_left,
+                      penalty_here[0], penalty_diag);
 
     for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
       penalty_temp[1] = penalty_here[i];
       penalty_here[i] =
-          COST_FUNCTION(query_val, ref_coeff1[i], penalty_here[i - 1],
-                        penalty_here[i], penalty_temp[0]);
+          COST_FUNCTION(query_val, ref_coeff1[i], ref_coeff2[i],
+                        penalty_here[i - 1], penalty_here[i], penalty_temp[0]);
 
       penalty_temp[0] = penalty_here[i + 1];
-      penalty_here[i + 1] =
-          COST_FUNCTION(query_val, ref_coeff1[i + 1], penalty_here[i - 1],
-                        penalty_here[i + 1], penalty_temp[1]);
+      penalty_here[i + 1] = COST_FUNCTION(
+          query_val, ref_coeff1[i + 1], ref_coeff2[i + 1], penalty_here[i - 1],
+          penalty_here[i + 1], penalty_temp[1]);
     }
 #ifndef NV_DEBUG
     penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-        query_val, ref_coeff1[SEGMENT_SIZE - 1], penalty_here[SEGMENT_SIZE - 2],
-        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+        query_val, ref_coeff1[SEGMENT_SIZE - 1], ref_coeff2[SEGMENT_SIZE - 1],
+        penalty_here[SEGMENT_SIZE - 2], penalty_here[SEGMENT_SIZE - 1],
+        penalty_temp[0]);
 
 #else
     penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-        query_val, ref_coeff1[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
-        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+        query_val, ref_coeff1[SEGMENT_SIZE - 1], ref_coeff2[SEGMENT_SIZE - 1],
+        FLOAT2HALF(INFINITY), penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
 #endif
 
     /* new_query_val buffer is empty, reload */
@@ -169,30 +171,32 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
       /* calculate CELLS_PER_THREAD cells */
       penalty_temp[0] = penalty_here[0];
-      penalty_here[0] = COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
-                                      penalty_here[0], penalty_diag);
+      penalty_here[0] =
+          COST_FUNCTION(query_val, ref_coeff1[0], ref_coeff2[0], penalty_left,
+                        penalty_here[0], penalty_diag);
 
       for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
         penalty_temp[1] = penalty_here[i];
-        penalty_here[i] =
-            COST_FUNCTION(query_val, ref_coeff1[i], penalty_here[i - 1],
-                          penalty_here[i], penalty_temp[0]);
+        penalty_here[i] = COST_FUNCTION(query_val, ref_coeff1[i], ref_coeff2[i],
+                                        penalty_here[i - 1], penalty_here[i],
+                                        penalty_temp[0]);
 
         penalty_temp[0] = penalty_here[i + 1];
-        penalty_here[i + 1] =
-            COST_FUNCTION(query_val, ref_coeff1[i + 1], penalty_here[i - 1],
-                          penalty_here[i + 1], penalty_temp[1]);
+        penalty_here[i + 1] = COST_FUNCTION(
+            query_val, ref_coeff1[i + 1], ref_coeff2[i + 1],
+            penalty_here[i - 1], penalty_here[i + 1], penalty_temp[1]);
       }
 #ifndef NV_DEBUG
-      penalty_here[SEGMENT_SIZE - 1] =
-          COST_FUNCTION(query_val, ref_coeff1[SEGMENT_SIZE - 1],
-                        penalty_here[SEGMENT_SIZE - 2],
-                        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+      penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
+          query_val, ref_coeff1[SEGMENT_SIZE - 1], ref_coeff2[SEGMENT_SIZE - 1],
+          penalty_here[SEGMENT_SIZE - 2], penalty_here[SEGMENT_SIZE - 1],
+          penalty_temp[0]);
 
 #else
-      penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-          query_val, ref_coeff1[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
-          penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+      penalty_here[SEGMENT_SIZE - 1] =
+          COST_FUNCTION(query_val, ref_coeff1[SEGMENT_SIZE - 1],
+                        ref_coeff2[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
+                        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
 #endif
 
       /* new_query_val buffer is empty, reload */
@@ -288,33 +292,37 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
     // sDTW logic
     if (thread_id != 0) {
-      penalty_here[0] = COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
-                                      penalty_here[0], penalty_diag);
+      penalty_here[0] =
+          COST_FUNCTION(query_val, ref_coeff1[0], ref_coeff2[0], penalty_left,
+                        penalty_here[0], penalty_diag);
     } else {
-      penalty_here[0] = ADD(
-          penalty_here[0], COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
-                                         penalty_here[0], penalty_diag));
+      penalty_here[0] =
+          ADD(penalty_here[0],
+              COST_FUNCTION(query_val, ref_coeff1[0], ref_coeff2[0],
+                            penalty_left, penalty_here[0], penalty_diag));
     }
 
     for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
       penalty_temp[1] = penalty_here[i];
       penalty_here[i] =
-          COST_FUNCTION(query_val, ref_coeff1[i], penalty_here[i - 1],
-                        penalty_here[i], penalty_temp[0]);
+          COST_FUNCTION(query_val, ref_coeff1[i], ref_coeff2[i],
+                        penalty_here[i - 1], penalty_here[i], penalty_temp[0]);
 
       penalty_temp[0] = penalty_here[i + 1];
-      penalty_here[i + 1] =
-          COST_FUNCTION(query_val, ref_coeff1[i + 1], penalty_here[i - 1],
-                        penalty_here[i + 1], penalty_temp[1]);
+      penalty_here[i + 1] = COST_FUNCTION(
+          query_val, ref_coeff1[i + 1], ref_coeff2[i + 1], penalty_here[i - 1],
+          penalty_here[i + 1], penalty_temp[1]);
     }
     // #ifndef NV_DEBUG
     penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-        query_val, ref_coeff1[SEGMENT_SIZE - 1], penalty_here[SEGMENT_SIZE - 2],
-        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+        query_val, ref_coeff1[SEGMENT_SIZE - 1], ref_coeff2[SEGMENT_SIZE - 1],
+        penalty_here[SEGMENT_SIZE - 2], penalty_here[SEGMENT_SIZE - 1],
+        penalty_temp[0]);
     // #else
     //     penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
-    //         query_val, ref_coeff1[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
-    //         penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+    //         query_val, ref_coeff1[SEGMENT_SIZE - 1], ref_coeff2[SEGMENT_SIZE
+    //         - 1], FLOAT2HALF(INFINITY), penalty_here[SEGMENT_SIZE - 1],
+    //         penalty_temp[0]);
     // #endif
 
     /* new_query_val buffer is empty, reload */
@@ -401,36 +409,37 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
       // sDTW logic
       if (thread_id != 0) {
-        penalty_here[0] = COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
-                                        penalty_here[0], penalty_diag);
+        penalty_here[0] =
+            COST_FUNCTION(query_val, ref_coeff1[0], ref_coeff2[0], penalty_left,
+                          penalty_here[0], penalty_diag);
       } else {
         penalty_here[0] =
             ADD(penalty_here[0],
-                COST_FUNCTION(query_val, ref_coeff1[0], penalty_left,
-                              penalty_here[0], penalty_diag));
+                COST_FUNCTION(query_val, ref_coeff1[0], ref_coeff2[0],
+                              penalty_left, penalty_here[0], penalty_diag));
       }
 
       for (int i = 1; i < SEGMENT_SIZE - 2; i += 2) {
         penalty_temp[1] = penalty_here[i];
-        penalty_here[i] =
-            COST_FUNCTION(query_val, ref_coeff1[i], penalty_here[i - 1],
-                          penalty_here[i], penalty_temp[0]);
+        penalty_here[i] = COST_FUNCTION(query_val, ref_coeff1[i], ref_coeff2[i],
+                                        penalty_here[i - 1], penalty_here[i],
+                                        penalty_temp[0]);
 
         penalty_temp[0] = penalty_here[i + 1];
-        penalty_here[i + 1] =
-            COST_FUNCTION(query_val, ref_coeff1[i + 1], penalty_here[i - 1],
-                          penalty_here[i + 1], penalty_temp[1]);
+        penalty_here[i + 1] = COST_FUNCTION(
+            query_val, ref_coeff1[i + 1], ref_coeff2[i + 1],
+            penalty_here[i - 1], penalty_here[i + 1], penalty_temp[1]);
       }
       // #ifndef NV_DEBUG
-      penalty_here[SEGMENT_SIZE - 1] =
-          COST_FUNCTION(query_val, ref_coeff1[SEGMENT_SIZE - 1],
-                        penalty_here[SEGMENT_SIZE - 2],
-                        penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
+      penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
+          query_val, ref_coeff1[SEGMENT_SIZE - 1], ref_coeff2[SEGMENT_SIZE - 1],
+          penalty_here[SEGMENT_SIZE - 2], penalty_here[SEGMENT_SIZE - 1],
+          penalty_temp[0]);
       // #else
       //       penalty_here[SEGMENT_SIZE - 1] = COST_FUNCTION(
       //           query_val, ref_coeff1[SEGMENT_SIZE - 1],
-      //           FLOAT2HALF(INFINITY), penalty_here[SEGMENT_SIZE - 1],
-      //           penalty_temp[0]);
+      //           ref_coeff2[SEGMENT_SIZE - 1], FLOAT2HALF(INFINITY),
+      //           penalty_here[SEGMENT_SIZE - 1], penalty_temp[0]);
       // #endif
 
       /* new_query_val buffer is empty, reload */

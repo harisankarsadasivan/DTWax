@@ -62,8 +62,6 @@ int main(int argc, char **argv) {
 
   delete REF_LD;
 
-  uint64_t k = 0;
-
 #pragma omp parallel for
 
   for (index_t i = 0; i < SEGMENT_SIZE; i++) {
