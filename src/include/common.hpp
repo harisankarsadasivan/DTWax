@@ -31,12 +31,12 @@ typedef float value_ht;
 #define KMER_LEN 6
 #define WARP_SIZE 32
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN 1024
+#define QUERY_LEN 32
 // #define REF_LEN 48502
-#define REF_LEN 1024 // change this to original length later
-#define BLOCK_NUM (2)
+#define REF_LEN 32 // change this to original length later
+#define BLOCK_NUM (1)
 #define STREAM_NUM 1
-#define SEGMENT_SIZE 32
+#define SEGMENT_SIZE 1
 
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
