@@ -62,8 +62,6 @@ void load_reference::load_ref_coeffs(reference_coefficients *ref) {
     stdev2 = stdev2 / ref_len;
     stdev1 = sqrt(stdev1 - (mean1 * mean1));
     stdev2 = sqrt(stdev2 - (mean2 * mean2));
-    std::cout << "print norm vars:" << mean1 << "," << mean2 << "," << stdev1
-              << "," << stdev2 << "\n";
 
 #ifdef NV_DEBUG
     std::cout << "Printing mean and stdev of time series before normalizing "
@@ -136,6 +134,7 @@ void load_reference::read_kmer_model(std::string fname) {
   // debugging:
   //   prints kmer to mean and stdev
   //       map
+#ifdef NV_DEBUG
   std::cout << "kmer\t"
             << "mean\t"
             << "variance\n";
@@ -145,6 +144,7 @@ void load_reference::read_kmer_model(std::string fname) {
     std::cout << itr->first << '\t' << std::get<0>(itr->second) << '\t'
               << std::get<1>(itr->second) << '\n';
   }
+#endif
 }
 
 // loads a single entry basecalled reference from FASTA file

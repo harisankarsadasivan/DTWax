@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
                          // *tmp is before restructuring for better mem
                          // coalescing
   raw_t *raw_array = NULL;
-
+  std::vector<std::string> read_ids; // store read_ids to dump in output
   //****************************************************Target ref loading &
   // re-organization for better mem coalescing & target
   // loading****************************************//
@@ -62,18 +62,28 @@ int main(int argc, char **argv) {
 
   delete REF_LD;
 
-#pragma omp parallel for
-
+  idxt k = 0;
   for (index_t i = 0; i < SEGMENT_SIZE; i++) {
-
     for (index_t j = 0; j < WARP_SIZE; j++) {
-      h_ref_coeffs[i * SEGMENT_SIZE + j].coeff1 =
-          h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff1;
-      h_ref_coeffs[i * SEGMENT_SIZE + j].coeff2 =
-          h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff2;
-      // std::cout << HALF2FLOAT(host_ref[k].x) << ",";
+      h_ref_coeffs[k].coeff1 = h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff1;
+      h_ref_coeffs[k].coeff2 = h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff2;
+
+      // std::cout << HALF2FLOAT(h_ref_coeffs[k].coeff1) << ","
+      //           << HALF2FLOAT(h_ref_coeffs[k].coeff2) << "\n";
+      k++;
     }
+    // std::cout << "warp\n";
   }
+  // for (index_t i = 0; i < SEGMENT_SIZE; i++) {
+
+  //   for (index_t j = 0; j < WARP_SIZE; j++) {
+  //     h_ref_coeffs[i * SEGMENT_SIZE + j].coeff1 =
+  //         h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff1;
+  //     h_ref_coeffs[i * SEGMENT_SIZE + j].coeff2 =
+  //         h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff2;
+  //     // std::cout << HALF2FLOAT(host_ref[k].x) << ",";
+  //   }
+  // }
   cudaFree(h_ref_coeffs_tmp); // delete the tmp array
 
   ASSERT(
@@ -91,8 +101,8 @@ int main(int argc, char **argv) {
   index_t NUM_READS; // counter to count number of reads to be
                      // processed + reference length
   squiggle_loader *loader = new squiggle_loader;
-  loader->load_data(ip_path, raw_array,
-                    NUM_READS); // load from input ONT data folder with FAST5
+  loader->load_data(ip_path, raw_array, NUM_READS,
+                    read_ids); // load from input ONT data folder with FAST5
 
   NUM_READS = 1; //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!lkdnsknefkwnef
   ASSERT(cudaMallocHost(
@@ -113,11 +123,13 @@ int main(int argc, char **argv) {
   NMZR->normalize(raw_array, NUM_READS, QUERY_LEN);
 
   TIMERSTOP(normalizer_kernel)
-  std::cout << "Normalizer processed  " << (QUERY_LEN * NUM_READS)
+#ifdef NV_DEBUG
+  std::cout << "cuDTW:: Normalizer processed  " << (QUERY_LEN * NUM_READS)
             << " raw samples in this time\n";
+#endif
 
 #ifdef NV_DEBUG
-  NMZR->print_normalized_query(raw_array, NUM_READS);
+  NMZR->print_normalized_query(raw_array, NUM_READS, read_ids);
 #endif
 
   delete NMZR;
@@ -129,14 +141,13 @@ int main(int argc, char **argv) {
       cudaMallocHost(&host_query, sizeof(value_ht) * NUM_READS * QUERY_LEN)); /*
                                   input */
   std::cout << "Normalized data:\n";
+
   for (index_t i = 0; i < NUM_READS; i++) {
     for (index_t j = 0; j < QUERY_LEN; j++) {
       host_query[(i * QUERY_LEN + j)] =
           FLOAT2HALF(raw_array[(i * QUERY_LEN + j)]);
-      std::cout << host_query[(i * QUERY_LEN + j)] << ",";
     }
   }
-  std::cout << "\n=================\n";
   cudaFreeHost(raw_array);
   TIMERSTOP(load_data)
 
@@ -217,22 +228,27 @@ int main(int argc, char **argv) {
 
   /* -----------------------------------------------------------------print
    * output -----------------------------------------------------*/
-#ifdef NV_DEBUG
+
+  std::cout << "Read_ID\t"
+            << "QUERY_LEN\t"
+            << "REF_LEN\t"
+            << "sDTW-score\n";
 #ifndef FP16
   for (index_t j = 0; j < NUM_READS; j++) {
-    std::cout << HALF2FLOAT(host_dist[j]) << " ";
+    std::cout << read_ids[j] << "\t" << QUERY_LEN << "\t" << REF_LEN << "\t"
+              << HALF2FLOAT(host_dist[j]) << "\n";
   }
 #else
   for (index_t j = 0; j < NUM_READS; j++) {
-    std::cout << HALF2FLOAT(host_dist[j].x) << " ";
+    std::cout << read_ids[j] << "\t" << QUERY_LEN << "\t" << REF_LEN << "\t"
+              << HALF2FLOAT(host_dist[j].x) << "\n";
   }
   std::cout << std::endl;
   for (index_t j = 0; j < NUM_READS; j++) {
-    std::cout << HALF2FLOAT(host_dist[j].y) << " ";
+    std::cout << read_ids[j] << "\t" << QUERY_LEN << "\t" << REF_LEN << "\t"
+              << HALF2FLOAT(host_dist[j].y) << "\n";
   }
 
-#endif
-  std::cout << std::endl;
 #endif
 
   /* -----------------------------------------------------------------free

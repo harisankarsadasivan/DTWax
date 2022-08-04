@@ -1,0 +1,159 @@
+wave= 63, tid=31, query= 0.493074, ref1= 0.766802, ref2= 0.802359, penalty_here[0]= 4.304784,            penalty_left =  4.380008,          penalty_diag =  4.327232
+min_segment=1.844165, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	32	32	1.84417
+--
+wave= 95, tid=31, query= -0.088235, ref1= -0.305934, ref2= 0.362180, penalty_here[1]= 25.331846,            penalty_left =  33.693687,          penalty_diag =  33.319397
+min_segment=4.910600, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	64	64	4.9106
+--
+wave= 127, tid=31, query= 0.758641, ref1= 0.393465, ref2= 2.832455, penalty_here[2]= 37.067364,            penalty_left =  34.706169,          penalty_diag =  34.691807
+min_segment=7.309076, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	96	96	7.30908
+--
+wave= 159, tid=31, query= -1.614955, ref1= 0.436418, ref2= 1.014095, penalty_here[3]= 35.298344,            penalty_left =  18.955446,          penalty_diag =  18.483839
+min_segment=10.817153, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	128	128	10.8172
+--
+wave= 191, tid=31, query= -1.534626, ref1= 1.004725, ref2= 5.375896, penalty_here[4]= 83.160660,            penalty_left =  25.559654,          penalty_diag =  25.568336
+min_segment=2.277583, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	160	160	2.27758
+--
+wave= 223, tid=31, query= 0.739291, ref1= -0.964648, ref2= 1229.317017, penalty_here[5]= 2990.808594,            penalty_left =  46.164539,          penalty_diag =  46.063210
+min_segment=2.622602, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	192	192	2.6226
+--
+wave= 255, tid=31, query= -0.730739, ref1= -1.315513, ref2= 6.440815, penalty_here[6]= 53.210907,            penalty_left =  94.098846,          penalty_diag =  93.986382
+min_segment=2.923489, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	224	224	2.92349
+--
+wave= 287, tid=31, query= -0.801253, ref1= 1.806548, ref2= 0.307534, penalty_here[7]= 45.093822,            penalty_left =  45.105427,          penalty_diag =  53.861469
+min_segment=3.221373, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	256	256	3.22137
+--
+wave= 319, tid=31, query= 0.090801, ref1= -0.657242, ref2= 8.885538, penalty_here[8]= 62.090233,            penalty_left =  58.587158,          penalty_diag =  58.787277
+min_segment=3.522819, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	288	288	3.52282
+--
+wave= 351, tid=31, query= -1.406017, ref1= -0.448336, ref2= 3.649000, penalty_here[9]= 95.940033,            penalty_left =  73.249435,          penalty_diag =  73.574524
+min_segment=4.813420, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	320	320	4.81342
+--
+wave= 383, tid=31, query= -0.668315, ref1= -0.468622, ref2= 3.351664, penalty_here[10]= 274.283295,            penalty_left =  73.993210,          penalty_diag =  73.810921
+min_segment=5.215525, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	352	352	5.21553
+--
+wave= 415, tid=31, query= 2.053772, ref1= -0.737330, ref2= 24.183340, penalty_here[11]= 970.938293,            penalty_left =  122.093964,          penalty_diag =  122.093697
+min_segment=5.675090, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	384	384	5.67509
+--
+wave= 447, tid=31, query= 0.077262, ref1= -0.600723, ref2= 0.270839, penalty_here[12]= 134.494705,            penalty_left =  194.412079,          penalty_diag =  195.372955
+min_segment=6.015574, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	416	416	6.01557
+--
+wave= 479, tid=31, query= 1.098232, ref1= -1.595931, ref2= 85.783249, penalty_here[13]= 1181.036377,            penalty_left =  767.825562,          penalty_diag =  1182.444580
+min_segment=6.276353, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	448	448	6.27635
+--
+wave= 511, tid=31, query= -0.758369, ref1= -0.775010, ref2= 316.001709, penalty_here[14]= 483.201294,            penalty_left =  150.574280,          penalty_diag =  149.827713
+min_segment=6.409917, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	480	480	6.40992
+--
+wave= 543, tid=31, query= -0.308476, ref1= -0.074106, ref2= 0.570186, penalty_here[15]= 174.912430,            penalty_left =  549.770325,          penalty_diag =  534.407776
+min_segment=6.606774, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	512	512	6.60677
+--
+wave= 575, tid=31, query= -0.131524, ref1= 1.072945, ref2= 146.249619, penalty_here[16]= 3594.747314,            penalty_left =  223.577209,          penalty_diag =  227.938583
+min_segment=6.921737, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	544	544	6.92174
+--
+wave= 607, tid=31, query= -2.400374, ref1= 1.120116, ref2= 360.556183, penalty_here[17]= 4038.715576,            penalty_left =  242.377106,          penalty_diag =  240.714417
+min_segment=7.168352, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	576	576	7.16835
+--
+wave= 639, tid=31, query= 0.034222, ref1= -1.674487, ref2= 4.724290, penalty_here[18]= 156.994263,            penalty_left =  123.577972,          penalty_diag =  123.516602
+min_segment=7.618537, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	608	608	7.61854
+--
+wave= 671, tid=31, query= 0.142961, ref1= 0.220494, ref2= 1.713678, penalty_here[19]= 150.126297,            penalty_left =  146.018173,          penalty_diag =  147.075302
+min_segment=7.831095, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	640	640	7.8311
+--
+wave= 703, tid=31, query= 0.862229, ref1= 0.642089, ref2= 1.298726, penalty_here[20]= 137.164719,            penalty_left =  161.628143,          penalty_diag =  161.709732
+min_segment=8.122353, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	672	672	8.12235
+--
+wave= 735, tid=31, query= 0.443641, ref1= -0.817652, ref2= 0.547341, penalty_here[21]= 146.150757,            penalty_left =  127.444794,          penalty_diag =  127.162125
+min_segment=8.427935, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	704	704	8.42793
+--
+wave= 767, tid=31, query= -0.966270, ref1= -0.615501, ref2= 43.882446, penalty_here[22]= 587.378601,            penalty_left =  168.805618,          penalty_diag =  168.563766
+min_segment=9.045382, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	736	736	9.04538
+--
+wave= 799, tid=31, query= 0.645323, ref1= -0.346698, ref2= 0.175729, penalty_here[23]= 146.875122,            penalty_left =  160.533966,          penalty_diag =  159.136948
+min_segment=9.431805, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	768	768	9.4318
+--
+wave= 831, tid=31, query= -0.245068, ref1= -0.234555, ref2= 0.412125, penalty_here[24]= 217.672150,            penalty_left =  247.193344,          penalty_diag =  246.771683
+min_segment=9.886607, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	800	800	9.88661
+--
+wave= 863, tid=31, query= 1.092124, ref1= -0.255917, ref2= 3.292778, penalty_here[25]= 370.137665,            penalty_left =  145.863510,          penalty_diag =  145.853485
+min_segment=9.967279, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	832	832	9.96728
+--
+wave= 895, tid=31, query= 1.567012, ref1= -0.978598, ref2= 0.348053, penalty_here[26]= 172.875580,            penalty_left =  319.605743,          penalty_diag =  316.781921
+min_segment=10.438766, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	864	864	10.4388
+--
+wave= 927, tid=31, query= -1.587968, ref1= -0.892265, ref2= 0.209301, penalty_here[27]= 180.722733,            penalty_left =  317.186981,          penalty_diag =  318.059143
+min_segment=10.591999, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	896	896	10.592
+--
+wave= 959, tid=31, query= -0.178967, ref1= 0.947256, ref2= 48.109207, penalty_here[28]= 376.358643,            penalty_left =  508.854675,          penalty_diag =  405.518524
+min_segment=10.790262, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	928	928	10.7903
+--
+wave= 991, tid=31, query= 0.238914, ref1= 0.439018, ref2= 0.275812, penalty_here[29]= 177.563461,            penalty_left =  193.630264,          penalty_diag =  191.197922
+min_segment=11.135676, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	960	960	11.1357
+--
+wave= 1023, tid=31, query= -0.316060, ref1= -0.508701, ref2= 1.250652, penalty_here[30]= 191.030502,            penalty_left =  168.544998,          penalty_diag =  168.537155
+min_segment=11.396652, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	992	992	11.3967
+--
+wave= 1055, tid=31, query= -0.501585, ref1= -0.100985, ref2= 5.789580, penalty_here[31]= 192.210678,            penalty_left =  182.739532,          penalty_diag =  182.495834
+min_segment=11.832041, tid=31, blockid=0
+Read_ID	QUERY_LEN	REF_LEN	sDTW-score
+read_0083a4a2-b062-44ed-988e-e7f5a301121f	1024	1024	11.832

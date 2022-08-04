@@ -15,7 +15,8 @@
 
 class squiggle_loader {
 public:
-  void load_data(std::string fn, value_ht *host_query, index_t &no_of_reads);
+  void load_data(std::string fn, value_ht *host_query, index_t &no_of_reads,
+                 std::vector<std::string> &read_ids);
   void load_query(raw_t *raw_array);
 
 private:
@@ -38,14 +39,16 @@ void squiggle_loader::load_query(raw_t *raw_array) {
     std::cout << raw_array[i] << ",";
 #endif
   }
+#ifdef NV_DEBUG
   std::cout << "\n=================\n";
+#endif
 }
 
 void squiggle_loader::read_fast5_from_folder(
     std::string path, std::vector<std::string> &file_queue) {
 
-  std::cout << "Loading ONT " << ONT_FILE_FORMAT << " reads from " << path
-            << "\n";
+  std::cout << "cuDTW:: Loading ONT " << ONT_FILE_FORMAT << " reads from "
+            << path << "\n";
   struct dirent *entry;
   DIR *dir = opendir(&path[0]);
   if (dir == NULL) {
@@ -59,7 +62,9 @@ void squiggle_loader::read_fast5_from_folder(
     fname = (entry->d_name);
     if (fname.substr(fname.rfind('.') + 1) == ONT_FILE_FORMAT) {
       file_queue.push_back(path + fname);
+#ifdef NV_DEBUG
       std::cout << "filename is " << path + fname << "\n";
+#endif
     }
   }
 
@@ -68,7 +73,8 @@ void squiggle_loader::read_fast5_from_folder(
 
 void squiggle_loader::load_data(std::string fn,
 
-                                raw_t *raw_array, index_t &no_of_reads) {
+                                raw_t *raw_array, index_t &no_of_reads,
+                                std::vector<std::string> &read_ids) {
 
   std::vector<std::string> file_queue;
   std::ifstream f(fn);
@@ -98,6 +104,7 @@ void squiggle_loader::load_data(std::string fn,
       Fast5Data data;
       data.rt.raw = NULL;
       data.rt.n = 0;
+      read_ids.push_back(reads[j]);
       std::string read_name = reads[j].substr(5);
       data.channel_params = fast5_get_channel_params(
           f5_file, read_name); // This has to be done prior to accessing raw
@@ -129,10 +136,12 @@ void squiggle_loader::load_data(std::string fn,
 
     fast5_close(f5_file);
   }
-  std::cout << file_queue.size() << " ONT " << ONT_FILE_FORMAT
+  std::cout << "cuDTW:: " << file_queue.size() << " ONT " << ONT_FILE_FORMAT
             << " files read\n"
-            << "Short/invalid reads exempted:: " << invalid_rds << std::endl;
-  std::cout << "Valid reads (NUM_READS) loaded :: " << valid_rds << std::endl;
+            << "cuDTW:: Short/invalid reads exempted:: " << invalid_rds
+            << std::endl;
+  std::cout << "cuDTW:: Valid reads (NUM_READS) loaded :: " << valid_rds
+            << std::endl;
   no_of_reads = valid_rds;
 }
 

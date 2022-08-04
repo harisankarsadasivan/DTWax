@@ -8,7 +8,8 @@
 #define CUDNN_ASSERT(func)                                                     \
   {                                                                            \
     cudnnStatus_t e = (func);                                                  \
-    std::cout << "\ncuDNN status: " << cudnnGetErrorString(e) << "\n";         \
+    std::cout << "\ncuDTW::  cuDNN Normalizer returned: "                      \
+              << cudnnGetErrorString(e) << "\n";                               \
   }
 
 // normalizer class
@@ -17,7 +18,8 @@ public:
   void normalize(raw_t *raw_squiggle_array, index_t num_reads, index_t length);
   normalizer(); // CUDNN normalizer
   ~normalizer();
-  void print_normalized_query(raw_t *raw_array, index_t NUM_READS);
+  void print_normalized_query(raw_t *raw_array, index_t NUM_READS,
+                              std::vector<std::string> &read_ids);
 
 private:
   float *bnScale, *bnBias;
@@ -26,9 +28,11 @@ private:
   float beta[1] = {0.0};
 };
 
-void normalizer::print_normalized_query(raw_t *raw_array, index_t NUM_READS) {
+void normalizer::print_normalized_query(raw_t *raw_array, index_t NUM_READS,
+                                        std::vector<std::string> &read_ids) {
   std::cout << "Normalized query:\n";
   for (index_t i = 0; i < NUM_READS; i++) {
+    std::cout << "cuDTW:: " << read_ids[i] << "\n";
     for (index_t j = 0; j < QUERY_LEN; j++) {
       std::cout << raw_array[(i * QUERY_LEN + j)] << ",";
     }
