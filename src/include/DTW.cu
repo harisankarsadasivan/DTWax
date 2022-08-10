@@ -186,6 +186,9 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     penalty_diag = penalty_left;
 
     penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
+    if (thread_id == 0) {
+      penalty_left = FLOAT2HALF(INFINITY);
+    }
 
 #if REF_BATCH > 1
     if ((wave >= WARP_SIZE) && (thread_id == RESULT_THREAD_ID)) {
