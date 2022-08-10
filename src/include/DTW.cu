@@ -218,6 +218,9 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   /*------------------------------for all ref batches > 0
    * ---------------------------------- */
   for (idxt ref_batch = 1; ref_batch < REF_BATCH; ref_batch++) {
+
+    min_segment = __shfl_down_sync((ALL), min_segment, 31);
+
     /* initialize penalties */
     // val_t penalty_left = FLOAT2HALF(INFINITY);
     penalty_diag = FLOAT2HALF(INFINITY);
@@ -272,10 +275,12 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
 #if REF_BATCH > 1
       if (thread_id == 0) {
+
         penalty_left = penalty_here_s[wave];
       } else if ((wave >= WARP_SIZE) && (thread_id == RESULT_THREAD_ID) &&
                  (ref_batch < (REF_BATCH - 1))) {
         penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
+
       }
 #endif
       // Find min of segment and then shuffle up for sDTW
@@ -283,7 +288,8 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
         for (idxt i = 0; i < SEGMENT_SIZE; i++) {
           min_segment = FIND_MIN(min_segment, penalty_here[i]);
         }
-        min_segment = __shfl_up_sync(ALL, min_segment, 1);
+        if (wave != (NUM_WAVES))
+          min_segment = __shfl_up_sync((ALL), min_segment, 1);
       }
     }
     /* return result */
