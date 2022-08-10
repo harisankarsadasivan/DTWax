@@ -63,16 +63,22 @@ int main(int argc, char **argv) {
   delete REF_LD;
 
   idxt k = 0;
-  for (index_t i = 0; i < SEGMENT_SIZE; i++) {
-    for (index_t j = 0; j < WARP_SIZE; j++) {
-      h_ref_coeffs[k].coeff1 = h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff1;
-      h_ref_coeffs[k].coeff2 = h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff2;
+  for (idxt l = 0; l < (REF_LEN / REF_TILE_SIZE); l += 1) {
+    for (idxt i = 0; i < SEGMENT_SIZE; i++) {
+      for (idxt j = 0; j < WARP_SIZE; j++) {
+        h_ref_coeffs[k].coeff1 =
+            h_ref_coeffs_tmp[(l * REF_TILE_SIZE) + (j * SEGMENT_SIZE) + i]
+                .coeff1;
+        h_ref_coeffs[k].coeff2 =
+            h_ref_coeffs_tmp[(l * REF_TILE_SIZE) + (j * SEGMENT_SIZE) + i]
+                .coeff2;
 
-      // std::cout << HALF2FLOAT(h_ref_coeffs[k].coeff1) << ","
-      //           << HALF2FLOAT(h_ref_coeffs[k].coeff2) << "\n";
-      k++;
+        // std::cout << HALF2FLOAT(h_ref_coeffs[k].coeff1) << ","
+        //           << HALF2FLOAT(h_ref_coeffs[k].coeff2) << "\n";
+        k++;
+      }
+      // std::cout << "warp\n";
     }
-    // std::cout << "warp\n";
   }
   // for (index_t i = 0; i < SEGMENT_SIZE; i++) {
 
@@ -104,7 +110,7 @@ int main(int argc, char **argv) {
   loader->load_data(ip_path, raw_array, NUM_READS,
                     read_ids); // load from input ONT data folder with FAST5
 
-  NUM_READS = 1; //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!lkdnsknefkwnef
+  // NUM_READS = 1; //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!lkdnsknefkwnef
   ASSERT(cudaMallocHost(
       &raw_array,
       (sizeof(raw_t) *
@@ -117,7 +123,7 @@ int main(int argc, char **argv) {
   //****************************************************NORMALIZER****************************************//
   // normalizer instance - does h2h pinned mem transfer, CUDNN setup andzscore
   // normalization, normalized raw_t output is returned in same array as input
-  normalizer *NMZR = new normalizer;
+  normalizer *NMZR = new normalizer(NUM_READS);
   TIMERSTART(normalizer_kernel)
 
   NMZR->normalize(raw_array, NUM_READS, QUERY_LEN);
@@ -168,7 +174,7 @@ int main(int argc, char **argv) {
   for (int stream_id = 0; stream_id < STREAM_NUM; stream_id++) {
     ASSERT(cudaMalloc(&device_query[stream_id],
                       (sizeof(value_ht) * BLOCK_NUM * QUERY_LEN)));
-    ASSERT(cudaMalloc(&device_dist[stream_id], sizeof(value_ht) * BLOCK_NUM));
+    ASSERT(cudaMalloc(&device_dist[stream_id], (sizeof(value_ht) * BLOCK_NUM)));
     ASSERT(cudaStreamCreate(&stream_var[stream_id]));
   }
 
@@ -179,52 +185,67 @@ int main(int argc, char **argv) {
   TIMERSTART_CUDA(concurrent_DTW_kernel_launch)
   //-------------total batches of concurrent workload to & fro
   // device---------------//
-  int batch_count = NUM_READS / (BLOCK_NUM * STREAM_NUM);
+  idxt batch_count = NUM_READS / (BLOCK_NUM * STREAM_NUM);
   std::cout << "Batch count: " << batch_count << " num_reads:" << NUM_READS
             << "\n";
 
-  if (batch_count > 0) {
-    for (int batch_id = 0; batch_id < batch_count; batch_id++) {
-      for (int stream_id = 0; stream_id < STREAM_NUM; stream_id++) {
-        //----h2d copy-------------//
-        ASSERT(cudaMemcpyAsync(
-            device_query[stream_id],
-            &host_query[(batch_id * STREAM_NUM * QUERY_LEN * BLOCK_NUM) +
-                        (stream_id * QUERY_LEN * BLOCK_NUM)],
-            sizeof(value_ht) * QUERY_LEN * BLOCK_NUM, cudaMemcpyHostToDevice,
-            stream_var[stream_id]));
+  for (idxt batch_id = 0; batch_id <= batch_count; batch_id += 1) {
+    std::cout << "Processing batch_id: " << batch_id << "\n";
 
-        //---------launch kernels------------//
-        distances<value_ht, index_t>(d_ref_coeffs, device_query[stream_id],
-                                     device_dist[stream_id], BLOCK_NUM,
-                                     FLOAT2HALF(0), stream_var[stream_id]);
-
-        //-----d2h copy--------------//
-        ASSERT(cudaMemcpyAsync(&host_dist[(batch_id * STREAM_NUM * BLOCK_NUM) +
-                                          (stream_id * BLOCK_NUM)],
-                               device_dist[stream_id],
-                               sizeof(value_ht) * BLOCK_NUM,
-                               cudaMemcpyDeviceToHost, stream_var[stream_id]));
-      }
+    idxt rds_in_batch = (BLOCK_NUM * STREAM_NUM);
+    if (batch_id < batch_count)
+      rds_in_batch = (BLOCK_NUM * STREAM_NUM);
+    else if ((batch_id == batch_count) &&
+             ((NUM_READS % (BLOCK_NUM * STREAM_NUM)) == 0)) {
+      if (batch_count != 0)
+        break;
+      else
+        rds_in_batch = NUM_READS;
+    } else if ((batch_id == batch_count) &&
+               ((NUM_READS % (BLOCK_NUM * STREAM_NUM)) != 0)) {
+      rds_in_batch = NUM_READS % (BLOCK_NUM * STREAM_NUM);
     }
-  } else {
+    for (idxt stream_id = 1; (stream_id <= STREAM_NUM) && (rds_in_batch != 0);
+         stream_id += 1) {
 
-    //----h2d copy-------------//
-    ASSERT(cudaMemcpyAsync(device_query[0], &host_query[0],
-                           sizeof(value_ht) * QUERY_LEN * NUM_READS,
-                           cudaMemcpyHostToDevice, stream_var[0]));
+      idxt rds_in_stream = BLOCK_NUM;
 
-    //---------launch kernels------------//
-    distances<value_ht, index_t>(d_ref_coeffs, device_query[0], device_dist[0],
-                                 NUM_READS, FLOAT2HALF(0), stream_var[0]);
+      if ((rds_in_batch - BLOCK_NUM) < 0) {
+        rds_in_stream = rds_in_batch;
+        rds_in_batch = 0;
+      } else {
+        rds_in_batch -= BLOCK_NUM;
+        rds_in_stream = BLOCK_NUM;
+      }
+      std::cout << "Issuing " << rds_in_stream
+                << " reads (blocks) from base addr:"
+                << (batch_id * STREAM_NUM * BLOCK_NUM * QUERY_LEN) +
+                       ((stream_id - 1) * BLOCK_NUM * QUERY_LEN)
+                << " to stream_id " << (stream_id - 1) << "\n";
+      //----h2d copy-------------//
+      ASSERT(cudaMemcpyAsync(
+          device_query[stream_id - 1],
+          &host_query[(batch_id * STREAM_NUM * BLOCK_NUM * QUERY_LEN) +
+                      ((stream_id - 1) * BLOCK_NUM * QUERY_LEN)],
+          (sizeof(value_ht) * QUERY_LEN * rds_in_stream),
+          cudaMemcpyHostToDevice, stream_var[stream_id - 1]));
 
-    //-----d2h copy--------------//
-    ASSERT(cudaMemcpyAsync(&host_dist[0], device_dist[0],
-                           sizeof(value_ht) * NUM_READS, cudaMemcpyDeviceToHost,
-                           stream_var[0]));
+      //---------launch kernels------------//
+      distances<value_ht, idxt>(d_ref_coeffs, device_query[stream_id - 1],
+                                device_dist[stream_id - 1], rds_in_stream,
+                                FLOAT2HALF(0), stream_var[stream_id - 1]);
+
+      //-----d2h copy--------------//
+      ASSERT(cudaMemcpyAsync(
+          &host_dist[(batch_id * STREAM_NUM * BLOCK_NUM) +
+                     ((stream_id - 1) * BLOCK_NUM)],
+          device_dist[stream_id - 1], (sizeof(value_ht) * rds_in_stream),
+          cudaMemcpyDeviceToHost, stream_var[stream_id - 1]));
+    }
   }
+
   ASSERT(cudaDeviceSynchronize());
-  TIMERSTOP_CUDA(concurrent_DTW_kernel_launch)
+  TIMERSTOP_CUDA(concurrent_DTW_kernel_launch, NUM_READS)
 
   /* -----------------------------------------------------------------print
    * output -----------------------------------------------------*/
@@ -235,18 +256,18 @@ int main(int argc, char **argv) {
             << "sDTW-score\n";
 #ifndef FP16
   for (index_t j = 0; j < NUM_READS; j++) {
-    std::cout << read_ids[j] << "\t" << QUERY_LEN << "\t" << REF_LEN << "\t"
-              << HALF2FLOAT(host_dist[j]) << "\n";
+    std::cout << j << "\t" << read_ids[j] << "\t" << QUERY_LEN << "\t"
+              << REF_LEN << "\t" << HALF2FLOAT(host_dist[j]) << "\n";
   }
 #else
   for (index_t j = 0; j < NUM_READS; j++) {
-    std::cout << read_ids[j] << "\t" << QUERY_LEN << "\t" << REF_LEN << "\t"
-              << HALF2FLOAT(host_dist[j].x) << "\n";
+    std::cout << j << "\t" << read_ids[j] << "\t" << QUERY_LEN << "\t"
+              << REF_LEN << "\t" << HALF2FLOAT(host_dist[j].x) << "\n";
   }
   std::cout << std::endl;
   for (index_t j = 0; j < NUM_READS; j++) {
-    std::cout << read_ids[j] << "\t" << QUERY_LEN << "\t" << REF_LEN << "\t"
-              << HALF2FLOAT(host_dist[j].y) << "\n";
+    std::cout << j << "\t" << read_ids[j] << "\t" << QUERY_LEN << "\t"
+              << REF_LEN << "\t" << HALF2FLOAT(host_dist[j].y) << "\n";
   }
 
 #endif

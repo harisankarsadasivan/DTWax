@@ -63,7 +63,7 @@
   cudaEventCreate(&stop##label);                                               \
   cudaEventRecord(start##label, 0);
 
-#define TIMERSTOP_CUDA(label)                                                  \
+#define TIMERSTOP_CUDA(label, NUM_READS)                                       \
   cudaSetDevice(0);                                                            \
   cudaEventRecord(stop##label, 0);                                             \
   cudaEventSynchronize(stop##label);                                           \

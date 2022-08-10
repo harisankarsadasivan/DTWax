@@ -16,14 +16,14 @@
 class normalizer {
 public:
   void normalize(raw_t *raw_squiggle_array, index_t num_reads, index_t length);
-  normalizer(); // CUDNN normalizer
+  normalizer(idxt NUM_READS); // CUDNN normalizer
   ~normalizer();
   void print_normalized_query(raw_t *raw_array, index_t NUM_READS,
                               std::vector<std::string> &read_ids);
 
 private:
-  float *bnScale, *bnBias;
-  float bnScale_h[QUERY_LEN], bnBias_h[QUERY_LEN];
+  float *bnScale, *bnBias, *bnScale_h, *bnBias_h;
+  idxt NUM_READS;
   float alpha[1] = {1};
   float beta[1] = {0.0};
 };
@@ -43,23 +43,29 @@ void normalizer::print_normalized_query(raw_t *raw_array, index_t NUM_READS,
 normalizer::~normalizer() {
   cudaFree(bnScale);
   cudaFree(bnBias);
+  cudaFreeHost(bnScale_h);
+  cudaFreeHost(bnBias_h);
 }
-normalizer::normalizer(void) {
+normalizer::normalizer(idxt NUM_READS) {
 
   // create scale and bias vectors
-  for (int i = 0; i < QUERY_LEN; i++) {
+  cudaMallocHost(&bnScale_h, (QUERY_LEN * sizeof(float) * NUM_READS));
+  cudaMallocHost(&bnBias_h, (QUERY_LEN * sizeof(float) * NUM_READS));
+  for (int i = 0; i < QUERY_LEN * NUM_READS; i++) {
     bnScale_h[i] = 1.0f;
     bnBias_h[i] = 0.0f;
   }
-  cudaMalloc(&bnScale, (QUERY_LEN * sizeof(float)));
-  cudaMalloc(&bnBias, (QUERY_LEN * sizeof(float)));
+  cudaMalloc(&bnScale, (QUERY_LEN * sizeof(float) * NUM_READS));
+  cudaMalloc(&bnBias, (QUERY_LEN * sizeof(float) * NUM_READS));
 
   cudaMemcpyAsync(bnScale,
                   &bnScale_h[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-                  sizeof(float) * QUERY_LEN, cudaMemcpyHostToDevice);
+                  sizeof(float) * NUM_READS * QUERY_LEN,
+                  cudaMemcpyHostToDevice);
   cudaMemcpyAsync(bnBias,
                   &bnBias_h[0], //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-                  sizeof(float) * QUERY_LEN, cudaMemcpyHostToDevice);
+                  sizeof(float) * NUM_READS * QUERY_LEN,
+                  cudaMemcpyHostToDevice);
 }
 
 __inline__ void normalizer::normalize(raw_t *raw_squiggle_array,
@@ -99,13 +105,11 @@ __inline__ void normalizer::normalize(raw_t *raw_squiggle_array,
       cudaMemcpyDeviceToHost);
 
   // std::cout << "cudnn normalized output:\n";
-  // for (uint64_t i = 0; i < (uint64_t)((int64_t)QUERY_LEN *
-  // (int64_t)NUM_READS);
-  //      i++) {
+  // for (uint64_t i = 0; i < (c * h); i++) {
 
   //   std::cout << raw_squiggle_array[i] << ",";
   // }
-  cudnnDestroy(handle_);
+  // cudnnDestroy(handle_);
   return;
 }
 

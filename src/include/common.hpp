@@ -33,9 +33,10 @@ typedef float value_ht;
 #define WARP_SIZE 32
 #define SEGMENT_SIZE 32
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN (WARP_SIZE * 48)
+#define QUERY_LEN (WARP_SIZE * 32)
 // #define REF_LEN 48502
-#define REF_LEN 1024 // change this to original length later; Keep this "even"!
+#define REF_LEN                                                                \
+  (1024 * 2) // change this to original length later; Keep this "even"!
 #define BLOCK_NUM (1)
 #define STREAM_NUM 1
 
@@ -45,13 +46,12 @@ typedef float value_ht;
 //-----------------derived variables--------------------------//
 
 #define GROUP_SIZE WARP_SIZE
-#define CELLS_PER_THREAD SEGMENT_SIZE
-
-#define REF_BATCH (REF_LEN / (SEGMENT_SIZE * WARP_SIZE))
+#define REF_TILE_SIZE (SEGMENT_SIZE * WARP_SIZE)
+#define REF_BATCH (REF_LEN / REF_TILE_SIZE)
 
 /* calculate when to stop, and which thread has final result */
-#define NUM_WAVES (QUERY_LEN + (REF_LEN - 1) / (CELLS_PER_THREAD * REF_BATCH))
+#define NUM_WAVES (QUERY_LEN + (REF_TILE_SIZE - 1) / (SEGMENT_SIZE))
 #define RESULT_THREAD_ID (WARP_SIZE - 1)
-#define RESULT_REG ((QUERY_LEN - 1) % CELLS_PER_THREAD)
+#define RESULT_REG (SEGMENT_SIZE - 1)
 
 #endif
