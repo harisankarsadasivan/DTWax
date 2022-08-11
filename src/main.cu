@@ -69,9 +69,9 @@ int main(int argc, char **argv) {
         h_ref_coeffs[k].coeff1 =
             h_ref_coeffs_tmp[(l * REF_TILE_SIZE) + (j * SEGMENT_SIZE) + i]
                 .coeff1;
-        h_ref_coeffs[k].coeff2 =
-            h_ref_coeffs_tmp[(l * REF_TILE_SIZE) + (j * SEGMENT_SIZE) + i]
-                .coeff2;
+        // h_ref_coeffs[k].coeff2 =
+        //     h_ref_coeffs_tmp[(l * REF_TILE_SIZE) + (j * SEGMENT_SIZE) + i]
+        //         .coeff2;
 
         // std::cout << HALF2FLOAT(h_ref_coeffs[k].coeff1) << ","
         //           << HALF2FLOAT(h_ref_coeffs[k].coeff2) << "\n";
@@ -80,16 +80,7 @@ int main(int argc, char **argv) {
       // std::cout << "warp\n";
     }
   }
-  // for (index_t i = 0; i < SEGMENT_SIZE; i++) {
 
-  //   for (index_t j = 0; j < WARP_SIZE; j++) {
-  //     h_ref_coeffs[i * SEGMENT_SIZE + j].coeff1 =
-  //         h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff1;
-  //     h_ref_coeffs[i * SEGMENT_SIZE + j].coeff2 =
-  //         h_ref_coeffs_tmp[j * SEGMENT_SIZE + i].coeff2;
-  //     // std::cout << HALF2FLOAT(host_ref[k].x) << ",";
-  //   }
-  // }
   cudaFree(h_ref_coeffs_tmp); // delete the tmp array
 
   ASSERT(

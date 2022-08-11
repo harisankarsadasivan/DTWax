@@ -17,8 +17,8 @@ public:
   // std::map<int, std::tuple<raw_t, raw_t>> kmer_model;
   void ref_loader(std::string fname);
   void read_kmer_model(std::string fname);
-  value_ht *ref_coeff1 = NULL,
-           ref_coeff2 = NULL; // coeff1 is 1/stdev and coeff2 is mean/stdev
+  value_ht *ref_coeff1 = NULL;
+  // ref_coeff2 = NULL; // coeff1 is 1/stdev and coeff2 is mean/stdev
   void load_ref_coeffs(reference_coefficients *ref);
 
 private:
@@ -36,7 +36,7 @@ void load_reference::load_ref_coeffs(reference_coefficients *ref) {
 
   index_t ref_len = REF_LEN / 2;
   for (idxt j = 0; j < 2; j++) {
-    raw_t mean1 = 0, stdev1 = 0, mean2 = 0, stdev2 = 0;
+    raw_t mean1 = 0, stdev1 = 0; // mean2 = 0, stdev2 = 0;
 
     // calculates mean and stdev
     for (index_t i = 0; i < ref_len; i++) {
@@ -46,22 +46,23 @@ void load_reference::load_ref_coeffs(reference_coefficients *ref) {
            itr != kmer_model.end(); ++itr) {
         if (target[j].substr(i, KMER_LEN) == itr->first) {
           mean1 += std::get<0>(itr->second);
-          mean2 += std::get<1>(itr->second);
+          // mean2 += std::get<1>(itr->second);
           stdev1 =
               stdev1 + (std::get<0>(itr->second)) * (std::get<0>(itr->second));
-          stdev2 =
-              stdev2 + (std::get<1>(itr->second)) * (std::get<1>(itr->second));
+          // stdev2 =
+          //    stdev2 + (std::get<1>(itr->second)) *
+          //    (std::get<1>(itr->second));
           break;
         }
       }
     }
 
     mean1 = mean1 / ref_len;
-    mean2 = mean2 / ref_len;
+    // mean2 = mean2 / ref_len;
     stdev1 = stdev1 / ref_len;
-    stdev2 = stdev2 / ref_len;
+    // stdev2 = stdev2 / ref_len;
     stdev1 = sqrt(stdev1 - (mean1 * mean1));
-    stdev2 = sqrt(stdev2 - (mean2 * mean2));
+    // stdev2 = sqrt(stdev2 - (mean2 * mean2));
 
 #ifdef NV_DEBUG
     std::cout << "Printing mean and stdev of time series before normalizing "
@@ -69,7 +70,7 @@ void load_reference::load_ref_coeffs(reference_coefficients *ref) {
               << mean1 << ", " << stdev1 << ", " << mean2 << ", " << stdev2
               << "\n";
 #endif
-    float coeff1, coeff2;
+    float coeff1; // coeff2;
     // z-score normalize the reference coefficients
     for (index_t i = 0; i < ref_len; i++) {
       // std::cout << fwd_reference.substr(i, KMER_LEN) << ",";
@@ -78,13 +79,14 @@ void load_reference::load_ref_coeffs(reference_coefficients *ref) {
            itr != kmer_model.end(); ++itr) {
         if (target[j].substr(i, KMER_LEN) == itr->first) {
           coeff1 = (std::get<0>(itr->second) - mean1) / stdev1;
-          coeff2 = (std::get<1>(itr->second) - mean2) / stdev2;
+          // coeff2 = (std::get<1>(itr->second) - mean2) / stdev2;
 #ifdef NV_DEBUG
           std::cout << "[ " << coeff1 << " ," << coeff2 << " ], ";
           // std::cout << coeff1 << ", " << coeff2 << "\n";
 #endif
           ref[start_idx[j] + i].coeff1 = FLOAT2HALF(coeff1);
-          ref[start_idx[j] + i].coeff2 = FLOAT2HALF(1 / (2 * coeff2 * coeff2));
+          // ref[start_idx[j] + i].coeff2 = FLOAT2HALF(1 / (2 * coeff2 *
+          // coeff2));
         }
       }
     }

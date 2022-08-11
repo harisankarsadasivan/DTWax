@@ -33,12 +33,13 @@ typedef float value_ht;
 #define WARP_SIZE 32
 #define SEGMENT_SIZE 32
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN (1024)
+#define QUERY_LEN (1024 * 4)
 // #define REF_LEN 48502
 #define REF_LEN                                                                \
-  (1024 * 12) // change this to original length later; Keep this "even"!
-#define BLOCK_NUM (1)
-#define STREAM_NUM 1
+  (1024 * 26) // indicates total length of forward + backward squiggle genome ;
+              // should be a multiple of SEGMENT_SIZE*WARP_SIZE*2
+#define BLOCK_NUM (84)
+#define STREAM_NUM 16
 
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"

@@ -16,8 +16,11 @@
 namespace cg = cooperative_groups;
 
 #define ALL 0xFFFFFFFF
+// #define COST_FUNCTION(q, r1, r2, l, t, d)                                      \
+//   FMA(FMA(FMA(r1, FLOAT2HALF(-1), q), FMA(r1, FLOAT2HALF(-1), q), 0), r2,      \
+//       FIND_MIN(l, FIND_MIN(t, d)))
 #define COST_FUNCTION(q, r1, r2, l, t, d)                                      \
-  FMA(FMA(FMA(r1, FLOAT2HALF(-1), q), FMA(r1, FLOAT2HALF(-1), q), 0), r2,      \
+  FMA(FMA(FMA(r1, FLOAT2HALF(-1), q), FMA(r1, FLOAT2HALF(-1), q), 0), 1,       \
       FIND_MIN(l, FIND_MIN(t, d)))
 
 // computes segments of the sDTW matrix
@@ -153,7 +156,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 #pragma unroll
   for (idxt i = 0; i < SEGMENT_SIZE; i++) {
     ref_coeff1[i] = ref[thread_id + i * WARP_SIZE].coeff1;
-    ref_coeff2[i] = ref[thread_id + i * WARP_SIZE].coeff2;
+    // ref_coeff2[i] = ref[thread_id + i * WARP_SIZE].coeff2;
 #ifdef NV_DEBUG
     printf("tid= %0d, ref_coeff1[%0d]=%0f\n", thread_id, i,
            HALF2FLOAT(ref_coeff1[i]));
@@ -246,8 +249,8 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     for (idxt i = 0; i < SEGMENT_SIZE; i++) {
       ref_coeff1[i] =
           ref[ref_batch * (REF_TILE_SIZE) + thread_id + i * WARP_SIZE].coeff1;
-      ref_coeff2[i] =
-          ref[ref_batch * (REF_TILE_SIZE) + thread_id + i * WARP_SIZE].coeff2;
+      // ref_coeff2[i] =
+      //   ref[ref_batch * (REF_TILE_SIZE) + thread_id + i * WARP_SIZE].coeff2;
     }
     /* calculate full matrix in wavefront parallel manner, multiple cells per
      * thread */
@@ -280,7 +283,6 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       } else if ((wave >= WARP_SIZE) && (thread_id == RESULT_THREAD_ID) &&
                  (ref_batch < (REF_BATCH - 1))) {
         penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
-
       }
 #endif
       // Find min of segment and then shuffle up for sDTW

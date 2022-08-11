@@ -9,7 +9,7 @@ typedef int idxt;
 typedef float raw_t;
 
 typedef struct ref_coefficients {
-  value_ht coeff1, coeff2;
+  value_ht coeff1; // coeff2;
 } reference_coefficients;
 
 #endif
