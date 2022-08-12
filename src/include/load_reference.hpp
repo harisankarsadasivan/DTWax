@@ -32,9 +32,13 @@ private:
 // load reference genome's coefficients and ref length
 void load_reference::load_ref_coeffs(reference_coefficients *ref) {
   std::string target[2] = {fwd_reference, rev_reference};
+#ifndef FP16
   idxt start_idx[2] = {0, REF_LEN / 2};
-
   index_t ref_len = REF_LEN / 2;
+#else
+  idxt start_idx[2] = {0, 0};
+  index_t ref_len = REF_LEN / 2;
+#endif
   for (idxt j = 0; j < 2; j++) {
     raw_t mean1 = 0, stdev1 = 0; // mean2 = 0, stdev2 = 0;
 
@@ -67,8 +71,7 @@ void load_reference::load_ref_coeffs(reference_coefficients *ref) {
 #ifdef NV_DEBUG
     std::cout << "Printing mean and stdev of time series before normalizing "
                  "squiggle ref coefficients: "
-              << mean1 << ", " << stdev1 << ", " << mean2 << ", " << stdev2
-              << "\n";
+              << mean1 << ", " << stdev1 << "\n";
 #endif
     float coeff1; // coeff2;
     // z-score normalize the reference coefficients
@@ -81,10 +84,18 @@ void load_reference::load_ref_coeffs(reference_coefficients *ref) {
           coeff1 = (std::get<0>(itr->second) - mean1) / stdev1;
           // coeff2 = (std::get<1>(itr->second) - mean2) / stdev2;
 #ifdef NV_DEBUG
-          std::cout << "[ " << coeff1 << " ," << coeff2 << " ], ";
+          std::cout << "[ " << coeff1 << "], ";
           // std::cout << coeff1 << ", " << coeff2 << "\n";
 #endif
+
+#ifndef FP16
           ref[start_idx[j] + i].coeff1 = FLOAT2HALF(coeff1);
+#else
+          if (j == 0)
+            ref[start_idx[j] + i].coeff1.x = __float2half_rn(coeff1);
+          else
+            ref[start_idx[j] + i].coeff1.y = __float2half_rn(coeff1);
+#endif
           // ref[start_idx[j] + i].coeff2 = FLOAT2HALF(1 / (2 * coeff2 *
           // coeff2));
         }

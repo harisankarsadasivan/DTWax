@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
   for (index_t i = 0; i < NUM_READS; i++) {
     for (index_t j = 0; j < QUERY_LEN; j++) {
       host_query[(i * QUERY_LEN + j)] =
-          FLOAT2HALF(raw_array[(i * QUERY_LEN + j)]);
+          FLOAT2HALF2(raw_array[(i * QUERY_LEN + j)]);
     }
   }
   cudaFreeHost(raw_array);
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
       //---------launch kernels------------//
       distances<value_ht, idxt>(d_ref_coeffs, device_query[stream_id - 1],
                                 device_dist[stream_id - 1], rds_in_stream,
-                                FLOAT2HALF(0), stream_var[stream_id - 1]);
+                                FLOAT2HALF2(0), stream_var[stream_id - 1]);
 
       //-----d2h copy--------------//
       ASSERT(cudaMemcpyAsync(
@@ -241,24 +241,24 @@ int main(int argc, char **argv) {
   /* -----------------------------------------------------------------print
    * output -----------------------------------------------------*/
 
+#ifndef FP16
   std::cout << "Read_ID\t"
             << "QUERY_LEN\t"
             << "REF_LEN\t"
             << "sDTW-score\n";
-#ifndef FP16
   for (index_t j = 0; j < NUM_READS; j++) {
     std::cout << j << "\t" << read_ids[j] << "\t" << QUERY_LEN << "\t"
               << REF_LEN << "\t" << HALF2FLOAT(host_dist[j]) << "\n";
   }
 #else
+  std::cout << "Read_ID\t"
+            << "QUERY_LEN\t"
+            << "REF_LEN\t"
+            << "sDTW score: fwd-strand\tsDTW score: rev-strand\n";
   for (index_t j = 0; j < NUM_READS; j++) {
     std::cout << j << "\t" << read_ids[j] << "\t" << QUERY_LEN << "\t"
-              << REF_LEN << "\t" << HALF2FLOAT(host_dist[j].x) << "\n";
-  }
-  std::cout << std::endl;
-  for (index_t j = 0; j < NUM_READS; j++) {
-    std::cout << j << "\t" << read_ids[j] << "\t" << QUERY_LEN << "\t"
-              << REF_LEN << "\t" << HALF2FLOAT(host_dist[j].y) << "\n";
+              << REF_LEN << "\t" << HALF2FLOAT(host_dist[j].x) << "\t"
+              << HALF2FLOAT(host_dist[j].y) << "\n";
   }
 
 #endif

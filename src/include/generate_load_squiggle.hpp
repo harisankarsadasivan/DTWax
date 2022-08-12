@@ -15,7 +15,7 @@
 
 class squiggle_loader {
 public:
-  void load_data(std::string fn, value_ht *host_query, index_t &no_of_reads,
+  void load_data(std::string fn, value_t *host_query, index_t &no_of_reads,
                  std::vector<std::string> &read_ids);
   void load_query(raw_t *raw_array);
 
