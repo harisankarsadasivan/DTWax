@@ -23,7 +23,7 @@ typedef float value_ht;
 #define HALF2FLOAT(a) a
 #define FIND_MIN(a, b) min(a, b)
 #define FIND_MAX(a, b) max(a, b)
-#define FMA(a, b, c) (a * b + c)
+#define FMA(a, b, c) __fmaf_ieee_rn(a, b, c)
 #define ADD(a, b) (a + b)
 #define DIV(a, b) (a & (b - 1)) // make sure b is power of 2
 #define SQRT(a) sqrtf(a)        // a is to be float
@@ -34,13 +34,13 @@ typedef float value_ht;
 #define WARP_SIZE 32
 #define SEGMENT_SIZE 32
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN (1024 * 4)
+#define QUERY_LEN (1024)
 // #define REF_LEN 48502
 #define REF_LEN                                                                \
   (1024 * 94) // indicates total length of forward + backward squiggle
               // genome ; should be a multiple of SEGMENT_SIZE*WARP_SIZE*2
-#define BLOCK_NUM (84)
-#define STREAM_NUM 16
+#define BLOCK_NUM (84 * 16)
+#define STREAM_NUM 1
 
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"

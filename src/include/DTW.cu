@@ -20,10 +20,17 @@ namespace cg = cooperative_groups;
 //   FMA(FMA(FMA(r1, FLOAT2HALF2(-1), q), FMA(r1, FLOAT2HALF2(-1), q), 0), r2,      \
 //       FIND_MIN(l, FIND_MIN(t, d)))
 
+#ifndef NO_REF_DEL
 #define COST_FUNCTION(q, r1, l, t, d)                                          \
   FMA(FMA(FMA(r1, FLOAT2HALF2(-1.0f), q), FMA(r1, FLOAT2HALF2(-1.0f), q),      \
           FLOAT2HALF2(0.0f)),                                                  \
       FLOAT2HALF2(1.0f), FIND_MIN(l, FIND_MIN(t, d)))
+#else // assuming there are no reference
+#define COST_FUNCTION(q, r1, l, t, d)                                          \
+  FMA(FMA(FMA(r1, FLOAT2HALF2(-1.0f), q), FMA(r1, FLOAT2HALF2(-1.0f), q),      \
+          FLOAT2HALF2(0.0f)),                                                  \
+      FLOAT2HALF2(1.0f), FIND_MIN(t, d))
+#endif
 
 // computes segments of the sDTW matrix
 template <typename idx_t, typename val_t>
