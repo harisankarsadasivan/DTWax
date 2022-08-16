@@ -59,5 +59,6 @@ typedef float value_ht;
 #define NUM_WAVES (QUERY_LEN + (REF_TILE_SIZE - 1) / (SEGMENT_SIZE))
 #define WARP_SIZE_MINUS_ONE (WARP_SIZE - 1)
 #define RESULT_REG (SEGMENT_SIZE - 1)
+#define NUM_WAVES_BY_WARP_SIZE ((NUM_WAVES / WARP_SIZE) * WARP_SIZE)
 
 #endif

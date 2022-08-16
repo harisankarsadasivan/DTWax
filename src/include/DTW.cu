@@ -140,6 +140,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   val_t penalty_here[SEGMENT_SIZE] = {FLOAT2HALF2(0)};
   val_t penalty_temp[2];
   val_t min_segment = FLOAT2HALF2(INFINITY); // finds min of segment for sDTW
+  val_t last_col_penalty_shuffled;           // used to store last col of matrix
 
   /* each thread computes SEGMENT_SIZE adjacent cells, get corresponding sig
    * values */
@@ -195,9 +196,19 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
 
 #if REF_BATCH > 1
-    if ((wave >= WARP_SIZE) && (thread_id == WARP_SIZE_MINUS_ONE)) {
+    // if ((wave >= WARP_SIZE) && (thread_id == WARP_SIZE_MINUS_ONE)) {
+    //   penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
+    // }
+    last_col_penalty_shuffled =
+        __shfl_down_sync(ALL, last_col_penalty_shuffled, 1);
+    if (thread_id == WARP_SIZE_MINUS_ONE)
+      last_col_penalty_shuffled = penalty_here[RESULT_REG];
+    if ((wave & WARP_SIZE_MINUS_ONE) == 0)
+      penalty_here_s[(wave - WARP_SIZE) + thread_id] =
+          last_col_penalty_shuffled;
+    else if (wave > NUM_WAVES_BY_WARP_SIZE)
       penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
-    }
+
 #endif
     // Find min of segment and then shuffle up for sDTW
     if (wave >= QUERY_LEN) {
@@ -276,10 +287,20 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 #endif
       }
 #if REF_BATCH > 1
-      else if ((wave >= WARP_SIZE) && (thread_id == WARP_SIZE_MINUS_ONE) &&
-               (ref_batch < (REF_BATCH - 1))) {
+      // else if ((wave >= WARP_SIZE) && (thread_id == WARP_SIZE_MINUS_ONE) &&
+      //          (ref_batch < (REF_BATCH - 1))) {
+      //   penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
+      // }
+
+      last_col_penalty_shuffled =
+          __shfl_down_sync(ALL, last_col_penalty_shuffled, 1);
+      if (thread_id == WARP_SIZE_MINUS_ONE)
+        last_col_penalty_shuffled = penalty_here[RESULT_REG];
+      if (((wave & WARP_SIZE_MINUS_ONE) == 0) && (ref_batch < (REF_BATCH - 1)))
+        penalty_here_s[(wave - WARP_SIZE) + thread_id] =
+            last_col_penalty_shuffled;
+      else if (wave > NUM_WAVES_BY_WARP_SIZE)
         penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
-      }
 #endif
       new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
 
