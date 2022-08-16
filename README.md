@@ -23,4 +23,4 @@ make -j 1000;
 cuDTW++: Ultra-Fast Dynamic Time Warping on CUDA-enabled GPUs
 Efficient CUDA implementation of the Dynamic Time Warp (DTW) algorithm. Details can be found in the paper "cuDTW++: Ultra-Fast Dynamic Time Warping on CUDA-enabled GPUs", by Bertil Schmidt and Christian Hundt (Euro-Par 2020).
 
-**Stating changes:** cuDTW++ is used as a starting framework. Underlying DTW algorithm is modified to sDTW algorithm. Further, the code is improved upon, scaled, analyzed and optimized to support ONT Read Until on A100 and other Ampere cards.
+**Stating changes:** cuDTW++ is used as a starting framework. Underlying DTW algorithm is modified to sDTW algorithm. Further, the code is scaled, analyzed, optimized and re-purposed to support ONT Read Until on A100 and other Ampere cards.
