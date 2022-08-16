@@ -1,9 +1,8 @@
 # ONT and CUDNN pre-requisites:
-sudo apt install hdf5-tools
-
 
 sudo apt-get install libhdf5-dev zlib1g-dev zlib1g
 
+sudo apt install hdf5-tools
 
 export HDF5_PLUGIN_PATH=/usr/local/hdf5/lib/plugin
 
