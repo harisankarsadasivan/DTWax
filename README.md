@@ -2,9 +2,13 @@
 sudo apt install hdf5-tools
 sudo apt-get install libhdf5-dev zlib1g-dev zlib1g
 
-#Install CUDA toolkit and CUDNN:
+# Install CUDA toolkit and CUDNN:
 Following 2 steps may require creating an account and logging-in.
+
+
 Install NVIDIA toolkit 11.5+ preferably from local run file. Follow guide here: https://developer.nvidia.com/cuda-downloads.
+
+
 Install CUDNN:install cudnn from https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html;
 
 # Clone repo:
