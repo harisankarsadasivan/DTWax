@@ -19,11 +19,8 @@ git clone --recursive https://github.com/hsadasivan/nv_cudtw.git -b FAST5
 make -j 1000;
 ./main <fast5_folder>  ref/dna_kmer_model.txt <path_to_reference.fasta> > output_log;
 
-
-**Acknowledgement:**
-
-
 # Acknowledgement:
 cuDTW++: Ultra-Fast Dynamic Time Warping on CUDA-enabled GPUs
-
 Efficient CUDA implementation of the Dynamic Time Warp (DTW) algorithm. Details can be found in the paper "cuDTW++: Ultra-Fast Dynamic Time Warping on CUDA-enabled GPUs", by Bertil Schmidt and Christian Hundt (Euro-Par 2020).
+
+**Stating changes:** cuDTW++ is used as a starting framework. Underlying DTW algorithm is modified to sDTW algorithm. Further, the code is improved upon, scaled, analyzed and optimized to support ONT Read Until on A100 and other Ampere cards.
