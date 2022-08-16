@@ -13,7 +13,7 @@ sudo apt-get install libhdf5-dev zlib1g-dev
 
 sudo apt install hdf5-tools
 
-export HDF5_PLUGIN_PATH=/usr/local/hdf5/lib/plugin
+export HDF5_PLUGIN_PATH=$HOME/nv_cudtw/src:$HDF5_PLUGIN_PATH
 
 
 # Clone repo:
