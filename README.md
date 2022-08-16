@@ -1,12 +1,3 @@
-# ONT and CUDNN pre-requisites:
-
-sudo apt-get install libhdf5-dev zlib1g-dev zlib1g
-
-sudo apt install hdf5-tools
-
-export HDF5_PLUGIN_PATH=/usr/local/hdf5/lib/plugin
-
-
 # Install CUDA toolkit and CUDNN:
 These two steps may require creating an account and logging-in.
 
@@ -15,6 +6,15 @@ Install NVIDIA toolkit 11.5+ preferably from a local run file. Please follow the
 
 
 Install CUDNN from https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html.
+
+# ONT and CUDNN pre-requisites:
+
+sudo apt-get install libhdf5-dev zlib1g-dev zlib1g
+
+sudo apt install hdf5-tools
+
+export HDF5_PLUGIN_PATH=/usr/local/hdf5/lib/plugin
+
 
 # Clone repo:
 git clone --recursive https://github.com/hsadasivan/nv_cudtw.git -b FAST5
