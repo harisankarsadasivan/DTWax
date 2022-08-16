@@ -7,9 +7,9 @@ Install NVIDIA toolkit 11.5+ preferably from a local run file. Please follow the
 
 Install CUDNN from https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html.
 
-# ONT and CUDNN pre-requisites:
+# ONT pre-requisites:
 
-sudo apt-get install libhdf5-dev zlib1g-dev zlib1g
+sudo apt-get install libhdf5-dev zlib1g-dev
 
 sudo apt install hdf5-tools
 
