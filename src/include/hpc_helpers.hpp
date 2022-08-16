@@ -69,9 +69,8 @@
   cudaEventSynchronize(stop##label);                                           \
   cudaEventElapsedTime(&time##label, start##label, stop##label);               \
   std::cout << "TIMING: " << time##label << " ms "                             \
-            << ((QUERY_LEN / (time##label * 1e6)) * (REF_LEN)*NUM_READS *      \
-                FP_PIPES)                                                      \
-            << " GCUPS (" << #label << ")" << std::endl;
+            << ((QUERY_LEN / (time##label * 1e3)) * NUM_READS / 10)            \
+            << " Mbps (" << #label << ")" << std::endl;
 //..........................................................other
 // macros.......................................................//
 #define ASSERT(ans)                                                            \

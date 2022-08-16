@@ -6,7 +6,6 @@
 
 #include <cuda_fp16.h>
 typedef __half2 value_ht;
-#define FP_PIPES 2
 #define HALF2FLOAT(a) __half2float(a)
 #define FLOAT2HALF(a, b) __floats2half2_rn(a, b)
 #define FIND_MIN(a, b) __hmin2(a, b)
@@ -18,7 +17,6 @@ typedef __half2 value_ht;
 
 #else
 typedef float value_ht;
-#define FP_PIPES 1
 #define FLOAT2HALF(a) a
 #define HALF2FLOAT(a) a
 #define FIND_MIN(a, b) min(a, b)
@@ -32,14 +30,20 @@ typedef float value_ht;
 
 #define KMER_LEN 6
 #define WARP_SIZE 32
-#define SEGMENT_SIZE 32
+#define SEGMENT_SIZE 1
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN (1024)
+#define QUERY_LEN (32) //>=WARP_SIZE for the coalesced shared mem
 // #define REF_LEN 48502
+
+#ifndef FP16
 #define REF_LEN                                                                \
-  (1024 * 94) // indicates total length of forward + backward squiggle
-              // genome ; should be a multiple of SEGMENT_SIZE*WARP_SIZE*2
-#define BLOCK_NUM (84 * 16)
+  (64) // indicates total length of forward + backward squiggle
+       // genome ; should be a multiple of SEGMENT_SIZE*WARP_SIZE*2
+#else
+#define REF_LEN (64) // length of fwd strand in case of FP16
+#endif
+
+#define BLOCK_NUM (1)
 #define STREAM_NUM 1
 
 #define ADAPTER_LEN 1000
@@ -53,7 +57,7 @@ typedef float value_ht;
 
 /* calculate when to stop, and which thread has final result */
 #define NUM_WAVES (QUERY_LEN + (REF_TILE_SIZE - 1) / (SEGMENT_SIZE))
-#define RESULT_THREAD_ID (WARP_SIZE - 1)
+#define WARP_SIZE_MINUS_ONE (WARP_SIZE - 1)
 #define RESULT_REG (SEGMENT_SIZE - 1)
 
 #endif

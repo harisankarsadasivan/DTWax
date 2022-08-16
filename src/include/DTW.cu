@@ -176,16 +176,12 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
                                   penalty_temp);
 
     /* new_query_val buffer is empty, reload */
-    if ((wave & (WARP_SIZE - 1)) == 0) {
+    if ((wave & (WARP_SIZE_MINUS_ONE)) == 0) {
       new_query_val = query[block_id * QUERY_LEN + wave + thread_id];
     }
 
     /* pass next query_value to each thread */
     query_val = __shfl_up_sync(ALL, query_val, 1);
-    if (thread_id == 0) {
-      query_val = new_query_val;
-    }
-    new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
 
     /* transfer border cell info */
 
@@ -193,11 +189,13 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
     penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
     if (thread_id == 0) {
+      query_val = new_query_val;
       penalty_left = FLOAT2HALF2(INFINITY);
     }
+    new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
 
 #if REF_BATCH > 1
-    if ((wave >= WARP_SIZE) && (thread_id == RESULT_THREAD_ID)) {
+    if ((wave >= WARP_SIZE) && (thread_id == WARP_SIZE_MINUS_ONE)) {
       penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
     }
 #endif
@@ -211,15 +209,16 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
   /* return result */
 
-  if ((thread_id == RESULT_THREAD_ID) && (REF_BATCH == 1)) {
+  //   if ((thread_id == WARP_SIZE_MINUS_ONE) && (REF_BATCH == 1)) {
 
-    dist[block_id] = min_segment;
-#ifdef NV_DEBUG
-    printf("min_segment=%0f, tid=%0d, blockid=%0d\n", min_segment, thread_id,
-           block_id);
-#endif
-    return;
-  }
+  //     dist[block_id] = min_segment;
+  // #ifdef NV_DEBUG
+  //     printf("min_segment=%0f, tid=%0d, blockid=%0d\n", min_segment,
+  //     thread_id,
+  //            block_id);
+  // #endif
+  //     return;
+  //   }
 
   /*------------------------------for all ref batches > 0
    * ---------------------------------- */
@@ -264,7 +263,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
                                     penalty_temp);
 
       /* new_query_val buffer is empty, reload */
-      if ((wave & (WARP_SIZE - 1)) == 0) {
+      if ((wave & (WARP_SIZE_MINUS_ONE)) == 0) {
         new_query_val = query[block_id * QUERY_LEN + wave + thread_id];
       }
 
@@ -272,22 +271,22 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       query_val = __shfl_up_sync(ALL, query_val, 1);
       if (thread_id == 0) {
         query_val = new_query_val;
+#if REF_BATCH > 1
+        penalty_left = penalty_here_s[wave];
+#endif
       }
+#if REF_BATCH > 1
+      else if ((wave >= WARP_SIZE) && (thread_id == WARP_SIZE_MINUS_ONE) &&
+               (ref_batch < (REF_BATCH - 1))) {
+        penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
+      }
+#endif
       new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
 
       /* transfer border cell info */
       penalty_diag = penalty_left;
       penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
 
-#if REF_BATCH > 1
-      if (thread_id == 0) {
-
-        penalty_left = penalty_here_s[wave];
-      } else if ((wave >= WARP_SIZE) && (thread_id == RESULT_THREAD_ID) &&
-                 (ref_batch < (REF_BATCH - 1))) {
-        penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
-      }
-#endif
       // Find min of segment and then shuffle up for sDTW
       if (wave >= QUERY_LEN) {
         for (idxt i = 0; i < SEGMENT_SIZE; i++) {
@@ -297,20 +296,19 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
           min_segment = __shfl_up_sync((ALL), min_segment, 1);
       }
     }
+  }
 
-    /* return result */
-    if ((thread_id == RESULT_THREAD_ID) && (ref_batch == (REF_BATCH - 1))) {
+  /* return result */
+  if (thread_id == WARP_SIZE_MINUS_ONE) {
 
-      dist[block_id] = min_segment;
+    dist[block_id] = min_segment;
 
 #ifdef NV_DEBUG
-      printf("min_segment=%0f, tid=%0d, blockid=%0d\n", min_segment, thread_id,
-             block_id);
+    printf("min_segment=%0f, tid=%0d, blockid=%0d\n", min_segment, thread_id,
+           block_id);
 #endif
-
-      return;
-    }
   }
+  return;
 }
 /////////////////////////
 ///////////////////////////
@@ -400,7 +398,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 // #endif
 
 //     /* new_query_val buffer is empty, reload */
-//     if ((wave & (WARP_SIZE - 1)) == 0) {
+//     if ((wave & (WARP_SIZE_MINUS_ONE)) == 0) {
 //       new_query_val = query[block_id * QUERY_LEN + wave + thread_id];
 //     }
 
@@ -417,15 +415,15 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 //     if (thread_id == 0) {
 //       penalty_left = FLOAT2HALF2(INFINITY);
 //     }
-//     if ((wave >= WARP_SIZE) && (thread_id == RESULT_THREAD_ID)) {
+//     if ((wave >= WARP_SIZE) && (thread_id == WARP_SIZE_MINUS_ONE)) {
 //       penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
 //     }
 //   }
 
 //   printf("final_score=%0f\n", HALF2FLOAT(penalty_here[RESULT_REG]));
 //   /* return result */
-//   if ((thread_id == RESULT_THREAD_ID) && (REF_BATCH == 1)) {
-//     // printf("@@@result_threadId=%0d\n",RESULT_THREAD_ID);
+//   if ((thread_id == WARP_SIZE_MINUS_ONE) && (REF_BATCH == 1)) {
+//     // printf("@@@result_threadId=%0d\n",WARP_SIZE_MINUS_ONE);
 
 //     dist[block_id] =
 //         penalty_here[RESULT_REG] > thresh ? FLOAT2HALF2(0) : FLOAT2HALF2(1);
@@ -501,7 +499,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 // #endif
 
 //       /* new_query_val buffer is empty, reload */
-//       if ((wave & (WARP_SIZE - 1)) == 0) {
+//       if ((wave & (WARP_SIZE_MINUS_ONE)) == 0) {
 //         new_query_val = query[block_id * QUERY_LEN + wave + thread_id];
 //       }
 
@@ -518,13 +516,14 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 //       if (thread_id == 0) {
 //         penalty_left = penalty_here_s[wave];
 //       }
-//       if ((wave >= WARP_SIZE) && (thread_id == RESULT_THREAD_ID)) {
+//       if ((wave >= WARP_SIZE) && (thread_id == WARP_SIZE_MINUS_ONE)) {
 //         penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
 //       }
 //     }
 //     /* return result */
-//     if ((thread_id == RESULT_THREAD_ID) && (ref_batch == (REF_BATCH - 1))) {
-//       // printf("@@@result_threadId=%0d\n",RESULT_THREAD_ID);
+//     if ((thread_id == WARP_SIZE_MINUS_ONE) && (ref_batch == (REF_BATCH - 1)))
+//     {
+//       // printf("@@@result_threadId=%0d\n",WARP_SIZE_MINUS_ONE);
 
 //       dist[block_id] =
 //           penalty_here[RESULT_REG] > thresh ? FLOAT2HALF2(0) :

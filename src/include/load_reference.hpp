@@ -37,7 +37,7 @@ void load_reference::load_ref_coeffs(reference_coefficients *ref) {
   index_t ref_len = REF_LEN / 2;
 #else
   idxt start_idx[2] = {0, 0};
-  index_t ref_len = REF_LEN / 2;
+  index_t ref_len = REF_LEN;
 #endif
   for (idxt j = 0; j < 2; j++) {
     raw_t mean1 = 0, stdev1 = 0; // mean2 = 0, stdev2 = 0;
