@@ -178,6 +178,8 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
     /* new_query_val buffer is empty, reload */
     if ((wave & (WARP_SIZE_MINUS_ONE)) == 0) {
+      // if (block_id * QUERY_LEN + wave + thread_id > 32075775)
+
       new_query_val = query[block_id * QUERY_LEN + wave + thread_id];
     }
 
@@ -267,6 +269,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     }
     /* calculate full matrix in wavefront parallel manner, multiple cells per
      * thread */
+
     for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
 
       compute_segment<idx_t, val_t>(wave, thread_id, query_val, ref_coeff1,
