@@ -1,0 +1,5 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/hsadasivan/sDTW-X/src'
+nvcc -std=c++11 --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW -DNO_REF_DEL -DFP16 -Xcompiler="-fopenmp -march=native" -O2 -lz -lhdf5 -I/usr/include/hdf5/serial -L/usr/lib/x86_64-linux-gnu/hdf5/serial -lcudnn  main.cu -o main
+make: Leaving directory '/home/hsadasivan/sDTW-X/src'
+ 

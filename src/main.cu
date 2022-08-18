@@ -134,9 +134,9 @@ int main(int argc, char **argv) {
 
   //****************************************************FLOAT to
   //__half2****************************************//
-  ASSERT(
-      cudaMallocHost(&host_query, sizeof(value_ht) * NUM_READS * QUERY_LEN)); /*
-                                  input */
+  ASSERT(cudaMallocHost(
+      &host_query, sizeof(value_ht) * (NUM_READS * QUERY_LEN + WARP_SIZE))); /*
+                     input */
   std::cout << "Normalized data:\n";
 
   for (index_t i = 0; i < NUM_READS; i++) {
@@ -144,6 +144,9 @@ int main(int argc, char **argv) {
       host_query[(i * QUERY_LEN + j)] =
           FLOAT2HALF2(raw_array[(i * QUERY_LEN + j)]);
     }
+  }
+  for (index_t i = 0; i < WARP_SIZE; i++) {
+    host_query[NUM_READS * QUERY_LEN + i] = FLOAT2HALF2(0.0f);
   }
   cudaFreeHost(raw_array);
   TIMERSTOP(load_data)
@@ -163,8 +166,9 @@ int main(int argc, char **argv) {
   // allocation-------------------------------------------------//
 
   for (int stream_id = 0; stream_id < STREAM_NUM; stream_id++) {
-    ASSERT(cudaMalloc(&device_query[stream_id],
-                      (sizeof(value_ht) * BLOCK_NUM * QUERY_LEN)));
+    ASSERT(
+        cudaMalloc(&device_query[stream_id],
+                   (sizeof(value_ht) * (BLOCK_NUM * QUERY_LEN + WARP_SIZE))));
     ASSERT(cudaMalloc(&device_dist[stream_id], (sizeof(value_ht) * BLOCK_NUM)));
     ASSERT(cudaStreamCreate(&stream_var[stream_id]));
   }
@@ -218,7 +222,7 @@ int main(int argc, char **argv) {
           device_query[stream_id - 1],
           &host_query[(batch_id * STREAM_NUM * BLOCK_NUM * QUERY_LEN) +
                       ((stream_id - 1) * BLOCK_NUM * QUERY_LEN)],
-          (sizeof(value_ht) * QUERY_LEN * rds_in_stream),
+          (sizeof(value_ht) * (QUERY_LEN * rds_in_stream + WARP_SIZE)),
           cudaMemcpyHostToDevice, stream_var[stream_id - 1]));
 
       //---------launch kernels------------//

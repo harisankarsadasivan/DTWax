@@ -30,21 +30,21 @@ typedef float value_ht;
 
 #define KMER_LEN 6
 #define WARP_SIZE 32
-#define SEGMENT_SIZE 1
+#define SEGMENT_SIZE 32
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN (32) //>=WARP_SIZE for the coalesced shared mem
+#define QUERY_LEN (4096) //>=WARP_SIZE for the coalesced shared mem
 // #define REF_LEN 48502
 
 #ifndef FP16
 #define REF_LEN                                                                \
-  (64) // indicates total length of forward + backward squiggle
-       // genome ; should be a multiple of SEGMENT_SIZE*WARP_SIZE*2
+  (94 * 1024) // indicates total length of forward + backward squiggle
+              // genome ; should be a multiple of SEGMENT_SIZE*WARP_SIZE*2
 #else
-#define REF_LEN (64) // length of fwd strand in case of FP16
+#define REF_LEN (47 * 1024) // length of fwd strand in case of FP16
 #endif
 
-#define BLOCK_NUM (1)
-#define STREAM_NUM 1
+#define BLOCK_NUM (108 * 32)
+#define STREAM_NUM 16
 
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
