@@ -60,5 +60,6 @@ typedef float value_ht;
 #define WARP_SIZE_MINUS_ONE (WARP_SIZE - 1)
 #define RESULT_REG (SEGMENT_SIZE - 1)
 #define NUM_WAVES_BY_WARP_SIZE ((NUM_WAVES / WARP_SIZE) * WARP_SIZE)
+#define REF_BATCH_MINUS_ONE (REF_BATCH - 1)
 
 #endif

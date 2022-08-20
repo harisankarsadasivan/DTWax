@@ -265,7 +265,9 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
    * ---------------------------------- */
 #if REF_BATCH > 1
   for (idxt ref_batch = 1; ref_batch < REF_BATCH; ref_batch++) {
+#ifdef NV_DEBUG
     printf("refbatch=%0d\n", ref_batch);
+#endif
     min_segment = __shfl_down_sync((ALL), min_segment, 31);
 
     /* initialize penalties */
@@ -354,8 +356,90 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       }
     }
   }
-#endif
 
+//----------------------------last
+//sub-matrix calculation or ref_batch=REF_BATCH-1------------------------------------------------//
+#ifdef NV_DEBUG
+  printf("refbatch=%0d\n", REF_BATCH_MINUS_ONE);
+#endif
+  min_segment = __shfl_down_sync((ALL), min_segment, 31);
+
+  /* initialize penalties */
+  // val_t penalty_left = FLOAT2HALF2(INFINITY);
+  penalty_diag = FLOAT2HALF2(INFINITY);
+  penalty_left = FLOAT2HALF2(INFINITY);
+  for (auto i = 0; i < SEGMENT_SIZE; i++)
+    penalty_here[i] = FLOAT2HALF2(0);
+  // for (auto i = 0; i < 2; i++)
+  //   penalty_temp[i] = FLOAT2HALF2(INFINITY);
+
+  /* load next WARP_SIZE query values from memory into new_query_val buffer */
+  query_val = FLOAT2HALF2(INFINITY);
+  new_query_val = query[block_id * QUERY_LEN + thread_id];
+
+  /* initialize first thread's chunk */
+  if (thread_id == 0) {
+    query_val = new_query_val;
+
+    penalty_left = penalty_here_s[0];
+  }
+  new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
+
+  for (idxt i = 0; i < SEGMENT_SIZE; i++) {
+    ref_coeff1[i] =
+        ref[REF_BATCH_MINUS_ONE * (REF_TILE_SIZE) + thread_id + i * WARP_SIZE]
+            .coeff1;
+    // ref_coeff2[i] =
+    //   ref[ref_batch * (REF_TILE_SIZE) + thread_id + i * WARP_SIZE].coeff2;
+  }
+  /* calculate full matrix in wavefront parallel manner, multiple cells per
+   * thread */
+
+  for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
+
+    compute_segment<idx_t, val_t>(wave, thread_id, query_val, ref_coeff1,
+                                  penalty_left, penalty_here, penalty_diag,
+                                  penalty_temp);
+
+    /* new_query_val buffer is empty, reload */
+    if ((wave & (WARP_SIZE_MINUS_ONE)) == 0) {
+      new_query_val = query[block_id * QUERY_LEN + wave + thread_id];
+    }
+
+    /* pass next query_value to each thread */
+    query_val = __shfl_up_sync(ALL, query_val, 1);
+    if (thread_id == 0) {
+      query_val = new_query_val;
+    }
+
+    new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
+
+    /* transfer border cell info */
+    penalty_diag = penalty_left;
+    penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
+
+    if (thread_id == 0) {
+
+      penalty_left = penalty_here_s[wave];
+    }
+
+    // Find min of segment and then shuffle up for sDTW
+    if (wave >= QUERY_LEN) {
+      for (idxt i = 0; i < SEGMENT_SIZE; i++) {
+        min_segment = FIND_MIN(min_segment, penalty_here[i]);
+      }
+#ifdef NV_DEBUG
+      if (thread_id == (wave - QUERY_LEN))
+        printf("minsegment=%0f,tid=%0d,wave=%0d,ref_batch=%0d\n", min_segment,
+               thread_id, wave, REF_BATCH_MINUS_ONE);
+#endif
+      if (wave != (NUM_WAVES))
+        min_segment = __shfl_up_sync((ALL), min_segment, 1);
+    }
+  }
+
+#endif
+  //-------------------------------------------------------------------------------------------------------------------//
   /* return result */
   if (thread_id == WARP_SIZE_MINUS_ONE) {
 
