@@ -32,7 +32,8 @@ typedef float value_ht;
 #define WARP_SIZE 32
 #define SEGMENT_SIZE 16
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN (4096) //>=WARP_SIZE for the coalesced shared mem
+#define QUERY_LEN                                                              \
+  (4096) //>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32
 // #define REF_LEN 48502
 
 #ifndef FP16
@@ -45,6 +46,7 @@ typedef float value_ht;
 
 #define BLOCK_NUM (108 * 16)
 #define STREAM_NUM 16
+#define SMEM_BUFFER_SIZE QUERY_LEN
 
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
@@ -61,5 +63,7 @@ typedef float value_ht;
 #define RESULT_REG (SEGMENT_SIZE - 1)
 #define NUM_WAVES_BY_WARP_SIZE ((NUM_WAVES / WARP_SIZE) * WARP_SIZE)
 #define REF_BATCH_MINUS_ONE (REF_BATCH - 1)
+#define SMEM_BUFFER_SIZE_MINUS_WARP_SIZE (SMEM_BUFFER_SIZE - WARP_SIZE)
+#define SMEM_BUFFER_SIZE_MINUS_ONE (SMEM_BUFFER_SIZE - 1)
 
 #endif

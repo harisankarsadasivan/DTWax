@@ -149,14 +149,14 @@ compute_segment(idxt &wave, const idx_t &thread_id, val_t &query_val,
  * DTW--------------------------------*/
 template <typename idx_t, typename val_t>
 __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
-                    idx_t num_entries, val_t thresh) {
+                    idx_t num_entries, val_t thresh, val_t *penalty_last_col) {
 
   // cooperative threading
   cg::thread_block_tile<GROUP_SIZE> g =
       cg::tiled_partition<GROUP_SIZE>(cg::this_thread_block());
 
 #if REF_BATCH > 1
-  __shared__ val_t penalty_here_s[QUERY_LEN]; ////RBD: have to chnge this
+  __shared__ val_t penalty_here_s[SMEM_BUFFER_SIZE]; ////RBD: have to chnge this
 #endif ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   /* create vars for indexing */
@@ -241,11 +241,25 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     if (thread_id == WARP_SIZE_MINUS_ONE)
       last_col_penalty_shuffled = penalty_here[RESULT_REG];
 
+#if (QUERY_LEN == SMEM_BUFFER_SIZE)
     if (((wave & WARP_SIZE_MINUS_ONE) == 0) && (wave < NUM_WAVES_BY_WARP_SIZE))
       penalty_here_s[(wave - WARP_SIZE) + thread_id] =
           last_col_penalty_shuffled;
-    else if ((wave >= NUM_WAVES_BY_WARP_SIZE) && (thread_id == WARP_SIZE - 1))
+    else if ((wave >= NUM_WAVES_BY_WARP_SIZE) &&
+             (thread_id == WARP_SIZE_MINUS_ONE))
       penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
+
+#else
+
+    if (((wave & WARP_SIZE_MINUS_ONE) == 0) &&
+        (wave < SMEM_BUFFER_SIZE_MINUS_WARP_SIZE))
+      penalty_here_s[(wave - WARP_SIZE) + thread_id] =
+          last_col_penalty_shuffled;
+    else if ((wave & WARP_SIZE_MINUS_ONE) == 0) &&(wave >= SMEM_BUFFER_SIZE_MINUS_WARP_SIZE) ) //write to global memory
+      penalty_last_col[(wave - WARP_SIZE)+ thread_id] =
+      last_col_penalty_shuffled;
+
+#endif
 
 #endif
     // Find min of segment and then shuffle up for sDTW
@@ -264,7 +278,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   /*------------------------------for all ref batches > 0
    * ---------------------------------- */
 #if REF_BATCH > 1
-  for (idxt ref_batch = 1; ref_batch < REF_BATCH; ref_batch++) {
+  for (idxt ref_batch = 1; ref_batch < REF_BATCH - 1; ref_batch++) {
 #ifdef NV_DEBUG
     printf("refbatch=%0d\n", ref_batch);
 #endif
@@ -321,15 +335,26 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
           __shfl_down_sync(ALL, last_col_penalty_shuffled, 1);
       if (thread_id == WARP_SIZE_MINUS_ONE)
         last_col_penalty_shuffled = penalty_here[RESULT_REG];
+#if (QUERY_LEN == SMEM_BUFFER_SIZE)
       if (((wave & WARP_SIZE_MINUS_ONE) == 0) &&
-          (ref_batch < (REF_BATCH - 1) && (wave < NUM_WAVES_BY_WARP_SIZE)))
+          (wave < NUM_WAVES_BY_WARP_SIZE))
         penalty_here_s[(wave - WARP_SIZE) + thread_id] =
             last_col_penalty_shuffled;
       else if ((wave >= NUM_WAVES_BY_WARP_SIZE) &&
-               (thread_id == WARP_SIZE_MINUS_ONE) &&
-               (ref_batch < (REF_BATCH - 1)))
+               (thread_id == WARP_SIZE_MINUS_ONE))
         penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
+#else
+      if (((wave & WARP_SIZE_MINUS_ONE) == 0) &&
+          (wave < SMEM_BUFFER_SIZE_MINUS_WARP_SIZE))
+        penalty_here_s[(wave - WARP_SIZE) + thread_id] =
+            last_col_penalty_shuffled;
+      else if (((wave & WARP_SIZE_MINUS_ONE) == 0) &&
+               (wave >=
+                SMEM_BUFFER_SIZE_MINUS_WARP_SIZE)) // write to global memory
+        penalty_last_col[(wave - WARP_SIZE) + thread_id] =
+            last_col_penalty_shuffled;
 
+#endif
       new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
 
       /* transfer border cell info */
@@ -337,8 +362,14 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
 
       if (thread_id == 0) {
-
+#if (QUERY_LEN == SMEM_BUFFER_SIZE)
         penalty_left = penalty_here_s[wave];
+#else
+        if (wave <= SMEM_BUFFER_SIZE_MINUS_ONE)
+          penalty_left = penalty_here_s[wave];
+        else
+          penalty_left = penalty_last_col[wave];
+#endif
       }
 
       // Find min of segment and then shuffle up for sDTW
@@ -358,7 +389,8 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   }
 
 //----------------------------last
-//sub-matrix calculation or ref_batch=REF_BATCH-1------------------------------------------------//
+// sub-matrix calculation or
+// ref_batch=REF_BATCH-1------------------------------------------------//
 #ifdef NV_DEBUG
   printf("refbatch=%0d\n", REF_BATCH_MINUS_ONE);
 #endif
@@ -420,7 +452,14 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
     if (thread_id == 0) {
 
+#if (QUERY_LEN == SMEM_BUFFER_SIZE)
       penalty_left = penalty_here_s[wave];
+#else
+      if (wave <= SMEM_BUFFER_SIZE_MINUS_ONE)
+        penalty_left = penalty_here_s[wave];
+      else
+        penalty_left = penalty_last_col[wave];
+#endif
     }
 
     // Find min of segment and then shuffle up for sDTW
