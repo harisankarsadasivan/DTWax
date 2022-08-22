@@ -1,8 +1,11 @@
 /*
 // Not a contribution
-// Changes made by NVIDIA CORPORATION & AFFILIATES enabling <XYZ> or otherwise documented as
-// NVIDIA-proprietary are not a contribution and subject to the following terms and conditions:
- * SPDX-FileCopyrightText: Copyright (c) <year> NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Changes made by NVIDIA CORPORATION & AFFILIATES enabling <XYZ> or otherwise
+documented as
+// NVIDIA-proprietary are not a contribution and subject to the following terms
+and conditions:
+ * SPDX-FileCopyrightText: Copyright (c) <year> NVIDIA CORPORATION & AFFILIATES.
+All rights reserved.
  * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  *
  * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
@@ -12,8 +15,27 @@
  * without an express license agreement from NVIDIA CORPORATION or
  * its affiliates is strictly prohibited.
  
- # SPDX-FileCopyrightText: Copyright (c) <year> NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ # SPDX-FileCopyrightText: Copyright (c) <year> NVIDIA CORPORATION & AFFILIATES.
+All rights reserved. # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  #
  # NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
  # property and proprietary rights in and to this material, related
@@ -175,23 +197,18 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   // cooperative threading
   // cg::thread_block_tile<GROUP_SIZE> g =
   //     cg::tiled_partition<GROUP_SIZE>(cg::this_thread_block());
-#ifdef PINGPONG_BUFFER
-  auto group = cooperative_groups::this_thread_block();
-#endif
-
 #if REF_BATCH > 1
   __shared__ val_t penalty_here_s[SMEM_BUFFER_SIZE]; ////RBD: have to chnge this
 
 #ifdef PINGPONG_BUFFER
-  extern __shared__ val_t
-      pp_buffer[PINGPONG_BUFFER_SIZE]; // stages_count * block.size() *
-                                       // sizeof(int) bytes
-
-  size_t pingpong_offset[STAGES_COUNT] = {0, group.size()};
+  extern __shared__ val_t s[];
+  constexpr unsigned stages_count = 2;
+  auto group = cooperative_groups::this_thread_block();
+  val_t *shared[stages_count] = {s, s + group.size()};
 
   // Create a synchronization object (cuda::pipeline)
   __shared__ cuda::pipeline_shared_state<cuda::thread_scope::thread_scope_block,
-                                         STAGES_COUNT>
+                                         stages_count>
       shared_state;
   auto pipeline = cuda::make_pipeline(group, &shared_state);
 
@@ -400,10 +417,11 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
 
 #ifdef PINGPONG_BUFFER
-      if (wave > SMEM_BUFFER_SIZE_MINUS_ONE) {
+      if ((wave > SMEM_BUFFER_SIZE_MINUS_ONE) && (wave &(TWICE_WARP_SIZE_MINUS_ONE)==0)) {
         for (size_t fetch = wave; fetch < (wave + STAGES_COUNT); ++fetch) {
           pipeline.producer_acquire();
-          cuda::memcpy_async(group, pp_buffer, penalty_last_col,
+          cuda::memcpy_async(group, &shared[fetch % 2],
+                             &penalty_last_col[fetch * group.size()],
                              sizeof(val_t) * group.size(), pipeline);
           pipeline.producer_commit(); // Commit the fetch-ahead stage
         }
@@ -421,7 +439,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
           penalty_left = penalty_here_s[wave];
         else {
           pipeline.consumer_wait(); // Wait for ‘subset’ stage tobeavailable
-          penalty_left = *(pp_buffer + pingpong_offset[0]);
+          // penalty_left = *(pp_buffer + pingpong_offset[0]);
           pipeline.consumer_release();
         }
 #else
