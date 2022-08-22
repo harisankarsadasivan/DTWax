@@ -1,8 +1,36 @@
+/*
+// Not a contribution
+// Changes made by NVIDIA CORPORATION & AFFILIATES enabling <XYZ> or otherwise documented as
+// NVIDIA-proprietary are not a contribution and subject to the following terms and conditions:
+ * SPDX-FileCopyrightText: Copyright (c) <year> NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ 
+ # SPDX-FileCopyrightText: Copyright (c) <year> NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ #
+ # NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ # property and proprietary rights in and to this material, related
+ # documentation and any modifications thereto. Any use, reproduction,
+ # disclosure or distribution of this material and related documentation
+ # without an express license agreement from NVIDIA CORPORATION or
+ # its affiliates is strictly prohibited.
+ */
 #ifndef COMMON_HPP
 #define COMON_HPP
 
 //...............global variables..........................//
 #ifdef FP16
+
+#ifdef PINGPONG_BUFFER
+#include <cuda/pipeline>
+#endif
 
 #include <cuda_fp16.h>
 typedef __half2 value_ht;
@@ -14,6 +42,7 @@ typedef __half2 value_ht;
 #define SUB(a, b) __hsub2(a, b)
 #define SQRT(a) h2sqrt(a)
 #define FLOAT2HALF2(a) FLOAT2HALF(a, a)
+#define LTE(a, b) __hblt2(a, b)
 
 #else
 typedef float value_ht;
@@ -26,11 +55,12 @@ typedef float value_ht;
 #define SUB(a, b) (a - b) // make sure b is power of 2
 #define SQRT(a) sqrtf(a)  // a is to be float
 #define FLOAT2HALF2(a) FLOAT2HALF(a)
+#define LTE(a, b) (a <= b)
 #endif
 
 #define KMER_LEN 6
 #define WARP_SIZE 32
-#define SEGMENT_SIZE 16
+#define SEGMENT_SIZE 32
 #define LOG_WARP_SIZE 5
 #define QUERY_LEN                                                              \
   (4096) //>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32
@@ -41,15 +71,20 @@ typedef float value_ht;
   (94 * 1024) // indicates total length of forward + backward squiggle
 // genome ; should be a multiple of SEGMENT_SIZE*WARP_SIZE*2
 #else
-#define REF_LEN (94 * 1024) // length of fwd strand in case of FP16
+#define REF_LEN (47 * 1024) // length of fwd strand in case of FP16
 #endif
 
-#define BLOCK_NUM (108 * 16)
+#define BLOCK_NUM (84 * 16)
 #define STREAM_NUM 16
-#define SMEM_BUFFER_SIZE QUERY_LEN
+#define SMEM_BUFFER_SIZE 1024
 
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
+#define STAGES_COUNT 2
+
+#ifdef PINGPONG_BUFFER
+#define PINGPONG_BUFFER_SIZE (STAGES_COUNT * WARP_SIZE * 4)
+#endif
 
 //-----------------derived variables--------------------------//
 

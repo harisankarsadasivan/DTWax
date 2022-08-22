@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Fri Aug 19 08:39:51 2022
+# Make data base, printed on Sun Aug 21 23:23:44 2022
 
 # Variables
 
@@ -32,7 +32,6 @@ CURDIR := /home/hsadasivan/sDTW-X/src
 SHELL = /bin/sh
 # environment
 VSCODE_NLS_CONFIG = {"locale":"en","availableLanguages":{}}
- 
 # environment
 _ = /home/hsadasivan/.vscode-server/bin/3b889b090b5ad5793f524b5d1d39fda662b96a2a/node
 # makefile (from 'Makefile', line 1)
@@ -46,7 +45,7 @@ CXXFLAGS = -Xcompiler="-fopenmp -march=native" -O2
 # environment
 XDG_DATA_DIRS = /usr/local/share:/usr/share:/var/lib/snapd/desktop
 # makefile (from 'Makefile', line 8)
-NVCCFLAGS = -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW -DNV_DEBUG 
+NVCCFLAGS = -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW -DFP16 -DNO_REF_DEL -DPINGPONG_BUFFER
 # environment
 DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
@@ -56,7 +55,7 @@ LESSOPEN = | /usr/bin/lesspipe %s
 # environment
 VSCODE_CWD = /home/hsadasivan
 # environment
-SSH_CONNECTION = 10.28.43.218 65448 10.112.208.99 22
+SSH_CONNECTION = 10.28.43.218 63444 10.112.208.99 22
 # environment
 PATH = /home/hsadasivan/.vscode-server/bin/3b889b090b5ad5793f524b5d1d39fda662b96a2a/bin/remote-cli:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/home/hsadasivan/.local/bin:/home/hsadasivan/anaconda3/bin:/home/hsadasivan/anaconda3/condabin:/usr/local/cuda-11.5/bin:/usr/local/cuda-11.6/bin:/home/hsadasivan/.vscode-server/bin/c3511e6c69bb39013c4a4b7b9566ec1ca73fc4d5/bin/remote-cli:/home/hsadasivan/.local/bin:/home/hsadasivan/anaconda3/bin:/home/hsadasivan/anaconda3/condabin:/home/hsadasivan/datasets/google-cloud-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/usr/local/cuda/bin:/usr/local/cuda/bin:/home/hsadasivan/.cargo/bin:/usr/local/go/bin:/usr/local/cuda/bin:/home/hsadasivan/.cargo/bin:/usr/local/go/bin:/usr/local/go/bin
 # environment
@@ -78,7 +77,7 @@ CUDAIR = /usr/local/cuda
 # environment
 PWD = /home/hsadasivan/sDTW-X/src
 # environment
-VSCODE_IPC_HOOK_CLI = /run/user/1000/vscode-ipc-adc900b1-a1fb-4b95-b2e8-b8b9afe15179.sock
+VSCODE_IPC_HOOK_CLI = /run/user/1000/vscode-ipc-b0856379-9e16-4378-94ae-8043e1500773.sock
 # automatic
 *D = $(patsubst %/,%,$(dir $*))
 # environment
@@ -118,7 +117,7 @@ MAKECMDGOALS := all
 # environment
 SHLVL = 3
 # environment
-XDG_SESSION_ID = 199
+XDG_SESSION_ID = 273
 # environment
 USER = hsadasivan
 # makefile
@@ -138,7 +137,7 @@ MAKEFLAGS = pqrR
 # environment
 MFLAGS = -pqrR
 # environment
-SSH_CLIENT = 10.28.43.218 65448 22
+SSH_CLIENT = 10.28.43.218 63444 22
 # environment
 MAIL = /var/mail/hsadasivan
 # environment
@@ -178,7 +177,7 @@ LANG = C
 # environment
 _CE_CONDA = 
 # variable set hash-table stats:
-# Load=83/1024=8%, Rehash=0, Collisions=11/110=10%
+# Load=83/1024=8%, Rehash=0, Collisions=11/117=9%
 
 # Pattern-specific Variable Values
 
@@ -186,9 +185,9 @@ _CE_CONDA =
 
 # Directories
 
-# . (device 66305, inode 1971065): 12 files, no impossibilities.
+# . (device 66305, inode 1971065): 10 files, no impossibilities.
 
-# 12 files, no impossibilities in 1 directories.
+# 10 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -201,7 +200,15 @@ all: main
 #  Implicit rule search has been done.
 #  File does not exist.
 #  File has been updated.
-#  Successfully updated.
+#  Needs to be updated (-q is set).
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/7=0%
+
+# Not a target:
+.SUFFIXES:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
 
 format:
 #  Implicit rule search has not been done.
@@ -213,7 +220,7 @@ format:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-08-18 12:54:52.37127847
+#  Last modified 2022-08-21 12:15:56.768213152
 #  File has been updated.
 #  Successfully updated.
 
@@ -233,32 +240,52 @@ clean:
 # Not a target:
 main.cu:
 #  Implicit rule search has been done.
-#  Last modified 2022-08-17 18:34:17.894400806
+#  Last modified 2022-08-20 11:58:10.141291728
 #  File has been updated.
 #  Successfully updated.
 
 main: main.cu
 #  Implicit rule search has not been done.
-#  Last modified 2022-08-18 23:36:00.562027552
+#  Implicit/static pattern stem: ''
+#  File does not exist.
 #  File has been updated.
-#  Successfully updated.
+#  Needs to be updated (-q is set).
+# automatic
+# @ := main
+# automatic
+# % := 
+# automatic
+# * := 
+# automatic
+# + := main.cu
+# automatic
+# | := 
+# automatic
+# < := main.cu
+# automatic
+# ^ := main.cu
+# automatic
+# ? := main.cu
+# variable set hash-table stats:
+# Load=8/32=25%, Rehash=0, Collisions=3/15=20%
 #  recipe to execute (from 'Makefile', line 14):
 	$(NVCC) $(NVCCFLAGS) $(CXXFLAGS) $(LIBS) main.cu -o main
 
 # files hash-table stats:
-# Load=8/1024=1%, Rehash=0, Collisions=2/22=9%
+# Load=8/1024=1%, Rehash=0, Collisions=2/23=9%
 # VPATH Search Paths
 
 # No 'vpath' search paths.
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 19 / storage = 154 B / avg = 8 B
-# current buf: size = 8162 B / used = 154 B / count = 19 / avg = 8 B
+# strcache buffers: 1 (0) / strings = 18 / storage = 149 B / avg = 8 B
+ 
+# current buf: size = 8162 B / used = 149 B / count = 18 / avg = 8 B
 
-# strcache performance: lookups = 31 / hit rate = 38%
+# strcache performance: lookups = 30 / hit rate = 40%
 # hash-table stats:
-# Load=19/8192=0%, Rehash=0, Collisions=1/31=3%
-# Finished Make data base on Fri Aug 19 08:39:51 2022
+# Load=18/8192=0%, Rehash=0, Collisions=1/30=3%
+# Finished Make data base on Sun Aug 21 23:23:44 2022
 
  
