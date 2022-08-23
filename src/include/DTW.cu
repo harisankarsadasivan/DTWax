@@ -172,7 +172,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   // cg::thread_block_tile<GROUP_SIZE> g =
   //     cg::tiled_partition<GROUP_SIZE>(cg::this_thread_block());
 #if REF_BATCH > 1
-  __shared__ val_t penalty_here_s[SMEM_BUFFER_SIZE];
+  __shared__ val_t penalty_last_col_smem[SMEM_BUFFER_SIZE];
 
 #ifdef PINGPONG_BUFFER
   __shared__ val_t shared[PINGPONG_BUFFER_SIZE];
@@ -267,13 +267,15 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     if (threadIdx.x == WARP_SIZE_MINUS_ONE)
       last_col_penalty_shuffled = penalty_here[RESULT_REG];
 
-    // coalesced write to global memory
-
+      // coalesced write to global memory
+#if (QUERY_LEN == SMEM_BUFFER_SIZE)
     if ((wave >= TWICE_WARP_SIZE_MINUS_ONE) &&
         (wave & WARP_SIZE_MINUS_ONE) == WARP_SIZE_MINUS_ONE) {
-      penalty_last_col[wave - TWICE_WARP_SIZE_MINUS_ONE + threadIdx.x] =
+      penalty_last_col_smem[wave - TWICE_WARP_SIZE_MINUS_ONE + threadIdx.x] =
           last_col_penalty_shuffled;
     }
+
+#endif
 
 #endif
     // Find min of segment and then shuffle up for sDTW
@@ -314,8 +316,9 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     /* initialize first thread's chunk */
     if (threadIdx.x == 0) {
       query_val = new_query_val;
-
-      penalty_left = penalty_last_col[0];
+#if (QUERY_LEN == SMEM_BUFFER_SIZE)
+      penalty_left = penalty_last_col_smem[0];
+#endif
     }
 
     new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
@@ -367,35 +370,15 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
           __shfl_down_sync(ALL, last_col_penalty_shuffled, 1);
       if (threadIdx.x == WARP_SIZE_MINUS_ONE)
         last_col_penalty_shuffled = penalty_here[RESULT_REG];
-      //  #if (QUERY_LEN == SMEM_BUFFER_SIZE)
-      //        if ((wave >= TWICE_WARP_SIZE)&&((wave & WARP_SIZE_MINUS_ONE) ==
-      //        0) &&
-      //            (wave < NUM_WAVES_BY_WARP_SIZE))
-      //          penalty_here_s[(wave - WARP_SIZE) + threadIdx.x] =
-      //              last_col_penalty_shuffled;
-      //        else if ((wave >= NUM_WAVES_BY_WARP_SIZE) &&
-      //                 (threadIdx.x == WARP_SIZE_MINUS_ONE))
-      //          penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
-      //  #else
-      //        if ((wave >= TWICE_WARP_SIZE)&&((wave & WARP_SIZE_MINUS_ONE) ==
-      //        0) &&
-      //            (wave < SMEM_BUFFER_SIZE_MINUS_WARP_SIZE))
-      //          penalty_here_s[(wave - WARP_SIZE) + threadIdx.x] =
-      //              last_col_penalty_shuffled;
-      //        else if (((wave & WARP_SIZE_MINUS_ONE) == 0) &&
-      //                 (wave >=
-      //                  SMEM_BUFFER_SIZE_MINUS_WARP_SIZE)) // write to global
-      //                  memory
-      //          penalty_last_col[(wave - WARP_SIZE) + threadIdx.x] =
-      //              last_col_penalty_shuffled;
 
-      //  #endif
-      // coalesced write to global memory
+        // coalesced write to global memory
+#if (QUERY_LEN == SMEM_BUFFER_SIZE)
       if ((wave >= TWICE_WARP_SIZE_MINUS_ONE) &&
           (wave & WARP_SIZE_MINUS_ONE) == WARP_SIZE_MINUS_ONE) {
-        penalty_last_col[wave - TWICE_WARP_SIZE_MINUS_ONE + threadIdx.x] =
+        penalty_last_col_smem[wave - TWICE_WARP_SIZE_MINUS_ONE + threadIdx.x] =
             last_col_penalty_shuffled;
       }
+#endif
       new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
 
       /* transfer border cell info */
@@ -428,7 +411,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       if (threadIdx.x == 0) {
 
         //  #if (QUERY_LEN == SMEM_BUFFER_SIZE)
-        //          penalty_left = penalty_here_s[wave];
+        //          penalty_left = penalty_last_col_smem[wave];
         //  #else
 
 #ifdef PINGPONG_BUFFER
@@ -436,10 +419,12 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
         penalty_left = shared[(wave & PINGPONG_BUFFER_SIZE_MINUS_ONE)];
 
 #else
-        penalty_left = penalty_last_col[wave];
+#if (QUERY_LEN == SMEM_BUFFER_SIZE)
+        penalty_left = penalty_last_col_smem[wave];
+#endif
 #endif
         //          if (wave <= SMEM_BUFFER_SIZE_MINUS_ONE)
-        //            penalty_left = penalty_here_s[wave];
+        //            penalty_left = penalty_last_col_smem[wave];
         //          else
         //            penalty_left = penalty_last_col[wave];
         //  #endif
@@ -491,8 +476,8 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   /* initialize first thread's chunk */
   if (threadIdx.x == 0) {
     query_val = new_query_val;
-    penalty_left = penalty_last_col[0];
-    //  penalty_left = penalty_here_s[0];
+    penalty_left = penalty_last_col_smem[0];
+    //  penalty_left = penalty_last_col_smem[0];
   }
 
   new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
@@ -530,12 +515,14 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
 
     if (threadIdx.x == 0) {
-      penalty_left = penalty_last_col[wave];
+#if (QUERY_LEN == SMEM_BUFFER_SIZE)
+      penalty_left = penalty_last_col_smem[wave];
+#endif
       //  #if (QUERY_LEN == SMEM_BUFFER_SIZE)
-      //        penalty_left = penalty_here_s[wave];
+      //        penalty_left = penalty_last_col_smem[wave];
       //  #else
       //        if (wave <= SMEM_BUFFER_SIZE_MINUS_ONE)
-      //          penalty_left = penalty_here_s[wave];
+      //          penalty_left = penalty_last_col_smem[wave];
       //        else
       //          penalty_left = penalty_last_col[wave];
       //  #endif
@@ -584,7 +571,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 //       cg::tiled_partition<GROUP_SIZE>(cg::this_thread_block());
 
 //   __shared__ val_t
-//       penalty_here_s[QUERY_LEN]; ////RBD: have to chnge this
+//       penalty_last_col_smem[QUERY_LEN]; ////RBD: have to chnge this
 //                                  ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 //   /* create vars for indexing */
@@ -679,7 +666,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 //       penalty_left = FLOAT2HALF2(INFINITY);
 //     }
 //     if ((wave >= WARP_SIZE) && (threadIdx.x == WARP_SIZE_MINUS_ONE)) {
-//       penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
+//       penalty_last_col_smem[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
 //     }
 //   }
 
@@ -716,7 +703,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 //     if (threadIdx.x == 0) {
 //       query_val = new_query_val;
 //       penalty_diag = FLOAT2HALF2(0);
-//       penalty_left = penalty_here_s[0];
+//       penalty_left = penalty_last_col_smem[0];
 //     }
 //     new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
 
@@ -782,10 +769,10 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 //       penalty_diag = penalty_left;
 //       penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1],
 //       1); if (threadIdx.x == 0) {
-//         penalty_left = penalty_here_s[wave];
+//         penalty_left = penalty_last_col_smem[wave];
 //       }
 //       if ((wave >= WARP_SIZE) && (threadIdx.x == WARP_SIZE_MINUS_ONE)) {
-//         penalty_here_s[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
+//         penalty_last_col_smem[(wave - WARP_SIZE)] = penalty_here[RESULT_REG];
 //       }
 //     }
 //     /* return result */
