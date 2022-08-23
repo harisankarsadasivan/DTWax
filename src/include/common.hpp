@@ -64,10 +64,11 @@ typedef float value_ht;
 
 #define KMER_LEN 6
 #define WARP_SIZE 32
-#define SEGMENT_SIZE 16
+#define SEGMENT_SIZE 32
 #define LOG_WARP_SIZE 5
 #define QUERY_LEN (4096)
-//>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32
+//>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32; >=64 if
+// using PINGPONG buffer
 
 #ifndef FP16
 #define REF_LEN                                                                \
@@ -83,12 +84,15 @@ typedef float value_ht;
 
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
-#define STAGES_COUNT 2
 
 #ifdef PINGPONG_BUFFER
+
+#define STAGES_COUNT 2
+#define STAGES_COUNT_MINUS_ONE (STAGES_COUNT - 1)
 #define PINGPONG_BUFFER_SIZE (STAGES_COUNT * WARP_SIZE)
 // multiple of warp_size
 #define PINGPONG_BUFFER_SIZE_MINUS_ONE (PINGPONG_BUFFER_SIZE - 1)
+
 #endif
 
 //-----------------derived variables--------------------------//
