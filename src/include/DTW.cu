@@ -14,25 +14,6 @@ All rights reserved.
  * disclosure or distribution of this material and related documentation
  * without an express license agreement from NVIDIA CORPORATION or
  * its affiliates is strictly prohibited.
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
  # SPDX-FileCopyrightText: Copyright (c) <year> NVIDIA CORPORATION & AFFILIATES.
 All rights reserved. # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
@@ -65,16 +46,9 @@ namespace cg = cooperative_groups;
 #ifndef NO_REF_DEL
 #define COST_FUNCTION(q, r1, l, t, d)                                          \
   FMA(FMA(SUB(r1, q), SUB(r1, q), FLOAT2HALF2(0.0f)), FLOAT2HALF2(1.0f),       \
-      FIND_MIN(l, FIND_MIN(t, d)))                                             \
-  // FMA(FMA(FMA(r1, FLOAT2HALF2(-1.0f), q), FMA(r1, FLOAT2HALF2(-1.0f), q),      \
-  //         FLOAT2HALF2(0.0f)),                                                  \
-  //     FLOAT2HALF2(1.0f), FIND_MIN(l, FIND_MIN(t, d)))
+      FIND_MIN(l, FIND_MIN(t, d)))
 
-#else // assuming there are no reference
-// #define COST_FUNCTION(q, r1, l, t, d)                                          \
-  // FMA(FMA(FMA(r1, FLOAT2HALF2(-1.0f), q), FMA(r1, FLOAT2HALF2(-1.0f), q),      \
-  //         FLOAT2HALF2(0.0f)),                                                  \
-  //     FLOAT2HALF2(1.0f), FIND_MIN(t, d))
+#else // assuming there are no reference deletions
 
 #define COST_FUNCTION(q, r1, l, t, d)                                          \
   FMA(FMA(SUB(r1, q), SUB(r1, q), FLOAT2HALF2(0.0f)), FLOAT2HALF2(1.0f),       \
@@ -201,16 +175,12 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   __shared__ val_t penalty_here_s[SMEM_BUFFER_SIZE]; ////RBD: have to chnge this
 
 #ifdef PINGPONG_BUFFER
-  extern __shared__ val_t s[];
-  constexpr unsigned stages_count = 2;
-  auto group = cooperative_groups::this_thread_block();
-  val_t *shared[stages_count] = {s, s + group.size()};
+  __shared__ val_t shared[PINGPONG_BUFFER_SIZE];
+  // auto block = cooperative_groups::this_thread_block();
+  size_t shared_offset[STAGES_COUNT] = {0, WARP_SIZE};
 
   // Create a synchronization object (cuda::pipeline)
-  __shared__ cuda::pipeline_shared_state<cuda::thread_scope::thread_scope_block,
-                                         stages_count>
-      shared_state;
-  auto pipeline = cuda::make_pipeline(group, &shared_state);
+  cuda::pipeline<cuda::thread_scope_thread> pipeline = cuda::make_pipeline();
 
 #endif
 
@@ -417,16 +387,26 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
 
 #ifdef PINGPONG_BUFFER
-      if ((wave > SMEM_BUFFER_SIZE_MINUS_ONE) && (wave &(TWICE_WARP_SIZE_MINUS_ONE)==0)) {
+      if ((wave > SMEM_BUFFER_SIZE_MINUS_ONE) &&
+          ((wave % PINGPONG_BUFFER_SIZE) == 0)) {
         for (size_t fetch = wave; fetch < (wave + STAGES_COUNT); ++fetch) {
           pipeline.producer_acquire();
-          cuda::memcpy_async(group, &shared[fetch % 2],
-                             &penalty_last_col[fetch * group.size()],
-                             sizeof(val_t) * group.size(), pipeline);
+          cuda::memcpy_async(
+              cooperative_groups::this_thread(),
+              (float *)(shared) + shared_offset[fetch % 2] + threadIdx.x,
+              (float *)(penalty_last_col) + wave + threadIdx.x,
+              cuda::aligned_size_t<4>(sizeof(val_t) * WARP_SIZE), pipeline);
           pipeline.producer_commit(); // Commit the fetch-ahead stage
         }
+        // printf("after pipeline prod commit, wave=%0d\n", wave);
       }
 
+#endif
+
+#ifdef PINGPONG_BUFFER
+      pipeline.consumer_wait(); // Wait for ‘subset’ stage tobeavailable
+      // printf("after pipeline cons wait, wave=%0d\n", wave);
+      __syncwarp();
 #endif
 
       if (threadIdx.x == 0) {
@@ -438,9 +418,8 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
         if (wave <= SMEM_BUFFER_SIZE_MINUS_ONE)
           penalty_left = penalty_here_s[wave];
         else {
-          pipeline.consumer_wait(); // Wait for ‘subset’ stage tobeavailable
-          // penalty_left = *(pp_buffer + pingpong_offset[0]);
-          pipeline.consumer_release();
+
+          penalty_left = shared[(wave & PINGPONG_BUFFER_SIZE_MINUS_ONE)];
         }
 #else
         if (wave <= SMEM_BUFFER_SIZE_MINUS_ONE)
@@ -450,6 +429,11 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 #endif
 #endif
       }
+
+#ifdef PINGPONG_BUFFER
+      pipeline.consumer_release();
+      // printf("after cons release wave=%0d\n", wave);
+#endif
 
       // Find min of segment and then shuffle up for sDTW
       if (wave >= QUERY_LEN) {

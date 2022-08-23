@@ -45,9 +45,11 @@ typedef __half2 value_ht;
 #define SUB(a, b) __hsub2(a, b)
 #define SQRT(a) h2sqrt(a)
 #define FLOAT2HALF2(a) FLOAT2HALF(a, a)
-#define LTE(a, b) __hblt2(a, b)
 
 #else
+#ifdef PINGPONG_BUFFER
+#include <cuda/pipeline>
+#endif
 typedef float value_ht;
 #define FLOAT2HALF(a) a
 #define HALF2FLOAT(a) a
@@ -58,16 +60,14 @@ typedef float value_ht;
 #define SUB(a, b) (a - b) // make sure b is power of 2
 #define SQRT(a) sqrtf(a)  // a is to be float
 #define FLOAT2HALF2(a) FLOAT2HALF(a)
-#define LTE(a, b) (a <= b)
 #endif
 
 #define KMER_LEN 6
 #define WARP_SIZE 32
 #define SEGMENT_SIZE 32
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN                                                              \
-  (4096) //>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32
-// #define REF_LEN 48502
+#define QUERY_LEN (2 * 1024)
+//>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32
 
 #ifndef FP16
 #define REF_LEN                                                                \
@@ -79,14 +79,16 @@ typedef float value_ht;
 
 #define BLOCK_NUM (84 * 16)
 #define STREAM_NUM 16
-#define SMEM_BUFFER_SIZE 1024  //has to be a multiple of 2*WARP_SIZE
+#define SMEM_BUFFER_SIZE 1024 // has to be a multiple of 2*WARP_SIZE
 
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
 #define STAGES_COUNT 2
 
 #ifdef PINGPONG_BUFFER
-#define PINGPONG_BUFFER_SIZE (STAGES_COUNT * WARP_SIZE * 4)
+#define PINGPONG_BUFFER_SIZE (STAGES_COUNT * WARP_SIZE)
+// multiple of warp_size
+#define PINGPONG_BUFFER_SIZE_MINUS_ONE (PINGPONG_BUFFER_SIZE - 1)
 #endif
 
 //-----------------derived variables--------------------------//
@@ -103,6 +105,6 @@ typedef float value_ht;
 #define REF_BATCH_MINUS_ONE (REF_BATCH - 1)
 #define SMEM_BUFFER_SIZE_MINUS_WARP_SIZE (SMEM_BUFFER_SIZE - WARP_SIZE)
 #define SMEM_BUFFER_SIZE_MINUS_ONE (SMEM_BUFFER_SIZE - 1)
-#define TWICE_WARP_SIZE_MINUS_ONE (2*WARP_SIZE-1)
+#define TWICE_WARP_SIZE_MINUS_ONE (2 * WARP_SIZE - 1)
 
 #endif

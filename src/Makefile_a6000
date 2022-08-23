@@ -5,7 +5,7 @@ LIBS = -lz -lhdf5 -I/usr/include/hdf5/serial -L/usr/lib/x86_64-linux-gnu/hdf5/se
 
 # LIBS = -lhdf5 -lcudnn -I/usr/include/hdf5/serial -L/usr/lib -L/usr/lib/x86_64-linux-gnu/hdf5/serial -I/usr/local/include -L/usr/local/lib -L/usr/local/lib 
 # NVCCFLAGS= -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW -DFP16 -DNO_REF_DEL -DNV_DEBUG 
-NVCCFLAGS= -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW -DFP16 #-DNV_DEBUG#-DNO_REF_DEL -DPINGPONG_BUFFER#-DNV_DEBUG -DPINGPONG_BUFFER 
+NVCCFLAGS= -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW -DFP16 -DNO_REF_DEL -DPINGPONG_BUFFER#-DNV_DEBUG -DPINGPONG_BUFFER 
 CXXFLAGS= -Xcompiler="-fopenmp -march=native" -O2#-DNV_DEBUG
 export HDF5_PLUGIN_PATH=/home/hsadasivan/.local/hdf5/lib/plugin
 all: main

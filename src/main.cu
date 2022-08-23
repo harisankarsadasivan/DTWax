@@ -7,17 +7,14 @@ and conditions:
  * SPDX-FileCopyrightText: Copyright (c) <year> NVIDIA CORPORATION & AFFILIATES.
 All rights reserved.
  * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- *
  * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
  * property and proprietary rights in and to this material, related
  * documentation and any modifications thereto. Any use, reproduction,
  * disclosure or distribution of this material and related documentation
  * without an express license agreement from NVIDIA CORPORATION or
  * its affiliates is strictly prohibited.
- 
-
  # SPDX-FileCopyrightText: Copyright (c) <year> NVIDIA CORPORATION & AFFILIATES.
-All rights reserved. # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#  All rights reserved. # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  #
  # NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
  # property and proprietary rights in and to this material, related
@@ -312,9 +309,7 @@ int main(int argc, char **argv) {
   cudaFreeHost(host_dist);
   cudaFree(h_ref_coeffs);
   cudaFree(d_ref_coeffs);
-#ifdef SMEM_ROLLING_ASYNC
   cudaFree(device_last_col);
-#endif
   TIMERSTOP(free)
 
   return 0;
