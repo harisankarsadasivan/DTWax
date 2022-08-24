@@ -174,20 +174,6 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 #if REF_BATCH > 1
   __shared__ val_t penalty_last_col_smem[SMEM_BUFFER_SIZE];
 
-#ifdef PINGPONG_BUFFER
-  __shared__ val_t shared[PINGPONG_BUFFER_SIZE];
-  // auto block = cooperative_groups::this_thread_block();
-  size_t shared_offset[STAGES_COUNT];
-
-  for (idxt i = 0; i < STAGES_COUNT; i++) {
-    shared_offset[i] = i * WARP_SIZE;
-  }
-
-  // Create a synchronization object (cuda::pipeline)
-  cuda::pipeline<cuda::thread_scope_thread> pipeline = cuda::make_pipeline();
-
-#endif
-
 #endif ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   // const idx_t base = 0; // blockIdx.x * QUERY_LEN;
@@ -230,9 +216,9 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 #endif
   }
 
-/* calculate full matrix in wavefront parallel manner, multiple cells per
- * thread */
- #ifdef L_UNROLL
+  /* calculate full matrix in wavefront parallel manner, multiple cells per
+   * thread */
+#ifdef L_UNROLL
 #pragma unroll(32)
 #endif
   for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
@@ -341,9 +327,9 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       //   ref[ref_batch * (REF_TILE_SIZE) + threadIdx.x + i *
       //   WARP_SIZE].coeff2;
     }
-/* calculate full matrix in wavefront parallel manner, multiple cells per
- * thread */
- #ifdef L_UNROLL
+    /* calculate full matrix in wavefront parallel manner, multiple cells per
+     * thread */
+#ifdef L_UNROLL
 #pragma unroll(32)
 #endif
 
@@ -393,44 +379,12 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       penalty_diag = penalty_left;
       penalty_left = __shfl_up_sync(ALL, penalty_here[SEGMENT_SIZE - 1], 1);
 
-#ifdef PINGPONG_BUFFER
-      if ((wave > SMEM_BUFFER_PLUS_WARP_SIZE_MINUS_ONE) &&
-          (((wave - SMEM_BUFFER_PLUS_WARP_SIZE) &
-            PINGPONG_BUFFER_SIZE_MINUS_ONE) == 0)) {
-        for (size_t fetch = wave; fetch < (wave + STAGES_COUNT); ++fetch) {
-          pipeline.producer_acquire();
-          cuda::memcpy_async(
-              cooperative_groups::this_thread(),
-              (float *)(shared) +
-                  shared_offset[fetch & STAGES_COUNT_MINUS_ONE] + threadIdx.x,
-              (float *)(penalty_last_col) + wave + threadIdx.x,
-              cuda::aligned_size_t<4>(sizeof(val_t) * WARP_SIZE), pipeline);
-          pipeline.producer_commit(); // Commit the fetch-ahead stage
-        }
-        // printf("after pipeline prod commit, wave=%0d\n", wave);
-      }
-
-#endif
-
-#ifdef PINGPONG_BUFFER
-      pipeline.consumer_wait(); // Wait for ‘subset’ stage tobeavailable
-      // printf("after pipeline cons wait, wave=%0d\n", wave);
-      __syncwarp();
-#endif
-
       if (threadIdx.x == 0) {
 
         //  #if (QUERY_LEN == SMEM_BUFFER_SIZE)
         //          penalty_left = penalty_last_col_smem[wave];
         //  #else
 
-#ifdef PINGPONG_BUFFER
-        if (wave <= SMEM_BUFFER_SIZE_MINUS_ONE)
-          penalty_left = penalty_last_col_smem[wave];
-        else
-          penalty_left = shared[(wave & PINGPONG_BUFFER_SIZE_MINUS_ONE)];
-
-#else
 #if (QUERY_LEN == SMEM_BUFFER_SIZE)
         penalty_left = penalty_last_col_smem[wave];
 #else
@@ -439,7 +393,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
         else
           penalty_left = penalty_last_col[wave];
 #endif
-#endif
+
         //          if (wave <= SMEM_BUFFER_SIZE_MINUS_ONE)
         //            penalty_left = penalty_last_col_smem[wave];
         //          else
@@ -447,11 +401,6 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
         //  #endif
         //  #endif
       }
-
-#ifdef PINGPONG_BUFFER
-      pipeline.consumer_release();
-      // printf("after cons release wave=%0d\n", wave);
-#endif
 
       // Find min of segment and then shuffle up for sDTW
       if (wave >= QUERY_LEN) {

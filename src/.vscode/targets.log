@@ -4,13 +4,13 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # Copyright (C) 1988-2014 Free Software Foundation, Inc.
 # License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 # This is free software: you are free to change and redistribute it.
- 
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Tue Aug 23 16:20:58 2022
+# Make data base, printed on Tue Aug 23 21:11:15 2022
 
 # Variables
 
+ 
 # automatic
 <D = $(patsubst %/,%,$(dir $<))
 # automatic
@@ -46,7 +46,7 @@ CXXFLAGS = -Xcompiler="-fopenmp -march=native" -O2
 # environment
 XDG_DATA_DIRS = /usr/local/share:/usr/share:/var/lib/snapd/desktop
 # makefile (from 'Makefile', line 9)
-NVCCFLAGS = -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW 
+NVCCFLAGS = -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW -DNV_DEBUG
 # environment
 DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
@@ -78,7 +78,7 @@ CUDAIR = /usr/local/cuda
 # environment
 PWD = /home/hsadasivan/sDTW-X/src
 # environment
-VSCODE_IPC_HOOK_CLI = /run/user/1000/vscode-ipc-3f538c2a-5e39-4f1e-908a-685ee33d112e.sock
+VSCODE_IPC_HOOK_CLI = /run/user/1000/vscode-ipc-4b185ee8-036c-4eb8-9a3c-2d7b2f8f070d.sock
 # automatic
 *D = $(patsubst %/,%,$(dir $*))
 # environment
@@ -100,6 +100,7 @@ APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
 # environment
 CONDA_PROMPT_MODIFIER = (base) 
 # automatic
+ 
 +F = $(notdir $+)
 # environment
 LESSCLOSE = /usr/bin/lesspipe %s %s
@@ -128,13 +129,13 @@ USER = hsadasivan
 # environment
 CONDA_SHLVL = 1
 # default
- 
 MAKE_COMMAND := make
 # default
 .VARIABLES := 
 # automatic
 *F = $(notdir $*)
 # makefile
+ 
 MAKEFLAGS = pqrR
 # environment
 MFLAGS = -pqrR
@@ -162,6 +163,7 @@ LC_ALL = C
 CONDA_PYTHON_EXE = /home/hsadasivan/anaconda3/bin/python
 # makefile (from 'Makefile', line 2)
 LIBS = -lz -lhdf5 -I/usr/include/hdf5/serial -L/usr/lib/x86_64-linux-gnu/hdf5/serial -lcudnn 
+ 
 # automatic
 ^F = $(notdir $^)
 # default
@@ -187,9 +189,10 @@ _CE_CONDA =
 
 # Directories
 
-# . (device 66305, inode 1971065): 19 files, no impossibilities.
+# . (device 66305, inode 1971065): 16 files, no impossibilities.
+ 
 
-# 19 files, no impossibilities in 1 directories.
+# 16 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -214,7 +217,7 @@ format:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-08-23 16:18:10.163824062
+#  Last modified 2022-08-23 21:11:09.435905072
 #  File has been updated.
 #  Successfully updated.
 
@@ -234,16 +237,17 @@ clean:
 # Not a target:
 main.cu:
 #  Implicit rule search has been done.
-#  Last modified 2022-08-23 16:18:26.831654097
+#  Last modified 2022-08-23 21:10:57.556027688
 #  File has been updated.
 #  Successfully updated.
 
 main: main.cu
 #  Implicit rule search has not been done.
-#  Last modified 2022-08-23 16:18:29.287629053
+#  Last modified 2022-08-23 21:11:00.835993835
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 15):
+ 
 	$(NVCC) $(NVCCFLAGS) $(CXXFLAGS) $(LIBS) main.cu -o main
 
 # files hash-table stats:
@@ -254,12 +258,12 @@ main: main.cu
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 26 / storage = 229 B / avg = 8 B
-# current buf: size = 8162 B / used = 229 B / count = 26 / avg = 8 B
+# strcache buffers: 1 (0) / strings = 23 / storage = 208 B / avg = 9 B
+# current buf: size = 8162 B / used = 208 B / count = 23 / avg = 9 B
 
-# strcache performance: lookups = 38 / hit rate = 31%
+# strcache performance: lookups = 35 / hit rate = 34%
 # hash-table stats:
-# Load=26/8192=0%, Rehash=0, Collisions=1/38=3%
-# Finished Make data base on Tue Aug 23 16:20:58 2022
+# Load=23/8192=0%, Rehash=0, Collisions=1/35=3%
+# Finished Make data base on Tue Aug 23 21:11:15 2022
 
  
