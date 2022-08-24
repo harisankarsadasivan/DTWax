@@ -4,9 +4,10 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # Copyright (C) 1988-2014 Free Software Foundation, Inc.
 # License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 # This is free software: you are free to change and redistribute it.
+ 
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Tue Aug 23 07:43:12 2022
+# Make data base, printed on Tue Aug 23 16:20:58 2022
 
 # Variables
 
@@ -40,12 +41,12 @@ MAKEFILE_LIST :=  Makefile
 NVCC = nvcc
 # 'override' directive
 GNUMAKEFLAGS := 
-# makefile (from 'Makefile', line 9)
+# makefile (from 'Makefile', line 10)
 CXXFLAGS = -Xcompiler="-fopenmp -march=native" -O2
 # environment
 XDG_DATA_DIRS = /usr/local/share:/usr/share:/var/lib/snapd/desktop
-# makefile (from 'Makefile', line 8)
-NVCCFLAGS = -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW -DFP16 
+# makefile (from 'Makefile', line 9)
+NVCCFLAGS = -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW 
 # environment
 DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
@@ -77,7 +78,7 @@ CUDAIR = /usr/local/cuda
 # environment
 PWD = /home/hsadasivan/sDTW-X/src
 # environment
-VSCODE_IPC_HOOK_CLI = /run/user/1000/vscode-ipc-64dd661e-620b-4750-9457-179297d86a79.sock
+VSCODE_IPC_HOOK_CLI = /run/user/1000/vscode-ipc-3f538c2a-5e39-4f1e-908a-685ee33d112e.sock
 # automatic
 *D = $(patsubst %/,%,$(dir $*))
 # environment
@@ -90,7 +91,7 @@ HOME = /home/hsadasivan
 LD_LIBRARY_PATH = /home/hsadasivan/anaconda2/lib:/usr/local/cuda-11.5/lib64:/home/hsadasivan/anaconda2/lib:/usr/local/cuda-11.6/lib64:/usr/local/cuda/lib
 # environment
 HOMEBREW_CELLAR = /home/linuxbrew/.linuxbrew/Cellar
-# makefile (from 'Makefile', line 10)
+# makefile (from 'Makefile', line 11)
 HDF5_PLUGIN_PATH = /home/hsadasivan/.local/hdf5/lib/plugin
 # environment
 LOGNAME = hsadasivan
@@ -127,6 +128,7 @@ USER = hsadasivan
 # environment
 CONDA_SHLVL = 1
 # default
+ 
 MAKE_COMMAND := make
 # default
 .VARIABLES := 
@@ -185,9 +187,9 @@ _CE_CONDA =
 
 # Directories
 
-# . (device 66305, inode 1971065): 16 files, no impossibilities.
+# . (device 66305, inode 1971065): 19 files, no impossibilities.
 
-# 16 files, no impossibilities in 1 directories.
+# 19 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -206,13 +208,13 @@ format:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 16):
+#  recipe to execute (from 'Makefile', line 17):
 	clang-format -i main.cu include/*.hpp include/*.cu include/*cpp
 
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-08-22 21:34:36.948539499
+#  Last modified 2022-08-23 16:18:10.163824062
 #  File has been updated.
 #  Successfully updated.
 
@@ -226,22 +228,22 @@ clean:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 18):
+#  recipe to execute (from 'Makefile', line 19):
 		rm -rf main 
 
 # Not a target:
 main.cu:
 #  Implicit rule search has been done.
-#  Last modified 2022-08-22 22:35:45.654816694
+#  Last modified 2022-08-23 16:18:26.831654097
 #  File has been updated.
 #  Successfully updated.
 
 main: main.cu
 #  Implicit rule search has not been done.
-#  Last modified 2022-08-22 22:35:48.70678529
+#  Last modified 2022-08-23 16:18:29.287629053
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 14):
+#  recipe to execute (from 'Makefile', line 15):
 	$(NVCC) $(NVCCFLAGS) $(CXXFLAGS) $(LIBS) main.cu -o main
 
 # files hash-table stats:
@@ -252,12 +254,12 @@ main: main.cu
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 23 / storage = 210 B / avg = 9 B
-# current buf: size = 8162 B / used = 210 B / count = 23 / avg = 9 B
+# strcache buffers: 1 (0) / strings = 26 / storage = 229 B / avg = 8 B
+# current buf: size = 8162 B / used = 229 B / count = 26 / avg = 8 B
 
-# strcache performance: lookups = 35 / hit rate = 34%
+# strcache performance: lookups = 38 / hit rate = 31%
 # hash-table stats:
-# Load=23/8192=0%, Rehash=0, Collisions=1/35=3%
-# Finished Make data base on Tue Aug 23 07:43:12 2022
+# Load=26/8192=0%, Rehash=0, Collisions=1/38=3%
+# Finished Make data base on Tue Aug 23 16:20:58 2022
 
  

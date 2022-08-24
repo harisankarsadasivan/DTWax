@@ -132,7 +132,7 @@ void squiggle_loader::load_data(std::string fn,
       Fast5Data data;
       data.rt.raw = NULL;
       data.rt.n = 0;
-      read_ids.push_back(reads[j]);
+
       std::string read_name = reads[j].substr(5);
       data.channel_params = fast5_get_channel_params(
           f5_file, read_name); // This has to be done prior to accessing raw
@@ -144,12 +144,14 @@ void squiggle_loader::load_data(std::string fn,
         continue;
       }
 
-      else
+      else {
 
         valid_rds++;
-#ifdef NV_DEBUG
+        read_ids.push_back(reads[j]);
+      }
+      // #ifdef NV_DEBUG
       std::cout << read_name << "\n";
-#endif
+      // #endif
       for (index_t itr = ADAPTER_LEN; itr < (QUERY_LEN + ADAPTER_LEN); itr++) {
         squiggle_vector.push_back((raw_t)data.rt.raw[itr]);
 #ifdef NV_DEBUG
