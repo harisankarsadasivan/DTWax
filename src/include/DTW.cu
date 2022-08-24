@@ -230,9 +230,11 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 #endif
   }
 
-  /* calculate full matrix in wavefront parallel manner, multiple cells per
-   * thread */
-  //#pragma unroll(32)
+/* calculate full matrix in wavefront parallel manner, multiple cells per
+ * thread */
+ #ifdef L_UNROLL
+#pragma unroll(32)
+#endif
   for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
     min_segment = __shfl_up_sync((ALL), min_segment, 1);
 
@@ -339,9 +341,11 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       //   ref[ref_batch * (REF_TILE_SIZE) + threadIdx.x + i *
       //   WARP_SIZE].coeff2;
     }
-    /* calculate full matrix in wavefront parallel manner, multiple cells per
-     * thread */
-    //#pragma unroll(32)
+/* calculate full matrix in wavefront parallel manner, multiple cells per
+ * thread */
+ #ifdef L_UNROLL
+#pragma unroll(32)
+#endif
 
     for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
 
@@ -502,9 +506,11 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     // ref_coeff2[i] =
     //   ref[ref_batch * (REF_TILE_SIZE) + threadIdx.x + i * WARP_SIZE].coeff2;
   }
-  /* calculate full matrix in wavefront parallel manner, multiple cells per
-   * thread */
-  //#pragma unroll(32)
+/* calculate full matrix in wavefront parallel manner, multiple cells per
+ * thread */
+#ifdef L_UNROLL
+#pragma unroll(32)
+#endif
   for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
 
     compute_segment<idx_t, val_t>(wave, query_val, ref_coeff1, penalty_left,
