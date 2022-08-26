@@ -14,217 +14,8 @@ All rights reserved.
  * disclosure or distribution of this material and related documentation
  * without an express license agreement from NVIDIA CORPORATION or
  * its affiliates is strictly prohibited.
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
  # SPDX-FileCopyrightText: Copyright (c) <year> NVIDIA CORPORATION & AFFILIATES.
-All rights reserved. # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#All rights reserved. # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  #
  # NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
  # property and proprietary rights in and to this material, related
@@ -409,7 +200,7 @@ int main(int argc, char **argv) {
     ASSERT(cudaMalloc(&device_dist[stream_id], (sizeof(value_ht) * BLOCK_NUM)));
     ASSERT(cudaStreamCreate(&stream_var[stream_id]));
     ASSERT(cudaMalloc(&device_last_col[stream_id],
-                      (sizeof(value_ht) * (QUERY_LEN + WARP_SIZE))));
+                      (sizeof(value_ht) * (QUERY_LEN))));
   }
 
   TIMERSTOP(malloc)
