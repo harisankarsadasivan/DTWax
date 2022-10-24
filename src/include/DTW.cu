@@ -209,6 +209,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
   for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
     min_segment = __shfl_up_sync((ALL), min_segment, 1);
 
+      if(((wave-QUERY_LEN)<=thread_id))//HS: block cells that have completed from further wavefronts
     compute_segment<idx_t, val_t>(wave, thread_id, query_val, ref_coeff1,
                                   penalty_left, penalty_here, penalty_diag,
                                   penalty_temp);
@@ -244,10 +245,10 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       last_col_penalty_shuffled = penalty_here[RESULT_REG];
 
     if (((wave & WARP_SIZE_MINUS_ONE) == 0) && (wave < NUM_WAVES_BY_WARP_SIZE) && (wave>WARP_SIZE)) //HS
-      penalty_here_s[(wave - 2*WARP_SIZE) + thread_id] =
+      penalty_here_s[(wave - TWICE_WARP_SIZE) + thread_id] =
           last_col_penalty_shuffled;
     else if ((wave >= NUM_WAVES_BY_WARP_SIZE) && (thread_id == WARP_SIZE_MINUS_ONE))
-      penalty_here_s[(wave - 2*WARP_SIZE)] = penalty_here[RESULT_REG];
+      penalty_here_s[(wave - TWICE_WARP_SIZE)] = penalty_here[RESULT_REG];
 
 #endif
     // Find min of segment and then shuffle up for sDTW
@@ -304,6 +305,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
     for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
 
+      if(((wave-QUERY_LEN)<=thread_id))//HS: block cells that have completed from further wavefronts
       compute_segment<idx_t, val_t>(wave, thread_id, query_val, ref_coeff1,
                                     penalty_left, penalty_here, penalty_diag,
                                     penalty_temp);
@@ -324,11 +326,11 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       if (thread_id == WARP_SIZE_MINUS_ONE)
         last_col_penalty_shuffled = penalty_here[RESULT_REG];
       if (((wave & WARP_SIZE_MINUS_ONE) == 0) && (wave < NUM_WAVES_BY_WARP_SIZE) &&(wave > WARP_SIZE))
-        penalty_here_s[(wave - 2*WARP_SIZE) + thread_id] =
+        penalty_here_s[(wave - TWICE_WARP_SIZE) + thread_id] =
             last_col_penalty_shuffled;
       else if ((wave >= NUM_WAVES_BY_WARP_SIZE) &&
                (thread_id == WARP_SIZE_MINUS_ONE) )
-        penalty_here_s[(wave - 2*WARP_SIZE)] = penalty_here[RESULT_REG];
+        penalty_here_s[(wave - TWICE_WARP_SIZE)] = penalty_here[RESULT_REG];
 
       new_query_val = __shfl_down_sync(ALL, new_query_val, 1);
 
@@ -397,6 +399,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 
   for (idxt wave = 1; wave <= NUM_WAVES; wave++) {
 
+    if(((wave-QUERY_LEN)<=thread_id))//HS: block cells that have completed from further wavefronts
     compute_segment<idx_t, val_t>(wave, thread_id, query_val, ref_coeff1,
                                   penalty_left, penalty_here, penalty_diag,
                                   penalty_temp);
