@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
       *device_query[STREAM_NUM], // time series on GPU
       *device_dist[STREAM_NUM];  // distance results on GPU
 
-  value_ht *device_last_col[STREAM_NUM]; // stors last column of sub-matrix
+  value_ht *device_last_row[STREAM_NUM]; // stors last column of sub-matrix
 
   reference_coefficients *h_ref_coeffs, *d_ref_coeffs,
       *h_ref_coeffs_tmp; // struct stores reference genome's coeffs for DTW;
@@ -199,8 +199,8 @@ int main(int argc, char **argv) {
                    (sizeof(value_ht) * (BLOCK_NUM * QUERY_LEN + WARP_SIZE))));
     ASSERT(cudaMalloc(&device_dist[stream_id], (sizeof(value_ht) * BLOCK_NUM)));
     ASSERT(cudaStreamCreate(&stream_var[stream_id]));
-    // ASSERT(cudaMalloc(&device_last_col[stream_id],
-    //                   (sizeof(value_ht) * (QUERY_LEN))));
+    ASSERT(cudaMalloc(&device_last_row[stream_id],
+                      (sizeof(value_ht) * (REF_LEN))));
   }
 
   TIMERSTOP(malloc)
@@ -258,7 +258,7 @@ int main(int argc, char **argv) {
       //---------launch kernels------------//
       distances<value_ht, idxt>(d_ref_coeffs, device_query[stream_id - 1],
                                 device_dist[stream_id - 1], rds_in_stream,
-                                FLOAT2HALF2(0), stream_var[stream_id - 1]);
+                                FLOAT2HALF2(0), stream_var[stream_id - 1],device_last_row[stream_id-1]);
 
       //-----d2h copy--------------//
       ASSERT(cudaMemcpyAsync(
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
   cudaFreeHost(host_dist);
   cudaFree(h_ref_coeffs);
   cudaFree(d_ref_coeffs);
-  // cudaFree(device_last_col);
+  cudaFree(device_last_row);
   TIMERSTOP(free)
 
   return 0;

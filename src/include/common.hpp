@@ -66,7 +66,8 @@ typedef float value_ht;
 #define WARP_SIZE 32
 #define SEGMENT_SIZE 32
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN (4096)
+#define QUERY_LEN (512)
+#define PREFIX_LEN 512
 //>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32; >=64 if
 // using PINGPONG buffer
 
@@ -79,7 +80,7 @@ typedef float value_ht;
 
 #define BLOCK_NUM (2)
 #define STREAM_NUM 1
-#define SMEM_BUFFER_SIZE 32 // has to be a multiple of 2*WARP_SIZE
+// #define SMEM_BUFFER_SIZE 32 // has to be a multiple of 2*WARP_SIZE
 
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
@@ -87,16 +88,18 @@ typedef float value_ht;
 
 //-----------------derived variables--------------------------//
 
-#define GROUP_SIZE WARP_SIZE
 #define REF_TILE_SIZE (SEGMENT_SIZE * WARP_SIZE)
 #define REF_BATCH (REF_LEN / REF_TILE_SIZE)
+#define QUERY_BATCH (QUERY_LEN/PREFIX_LEN)
 
 /* calculate when to stop, and which thread has final result */
-#define NUM_WAVES (QUERY_LEN + (REF_TILE_SIZE - 1) / (SEGMENT_SIZE))
+#define NUM_WAVES (PREFIX_LEN + (REF_TILE_SIZE - 1) / (SEGMENT_SIZE))
 #define WARP_SIZE_MINUS_ONE (WARP_SIZE - 1)
 #define RESULT_REG (SEGMENT_SIZE - 1)
 #define NUM_WAVES_BY_WARP_SIZE ((NUM_WAVES / WARP_SIZE) * WARP_SIZE)
 #define REF_BATCH_MINUS_ONE (REF_BATCH - 1)
 #define TWICE_WARP_SIZE (2 * WARP_SIZE)
+
+
 
 #endif
