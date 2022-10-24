@@ -1,0 +1,8 @@
+[console_scripts]
+check_compression = ont_fast5_api.conversion_tools.check_file_compression:main
+compress_fast5 = ont_fast5_api.conversion_tools.compress_fast5:main
+demux_fast5 = ont_fast5_api.conversion_tools.demux_fast5:main
+fast5_subset = ont_fast5_api.conversion_tools.fast5_subset:main
+multi_to_single_fast5 = ont_fast5_api.conversion_tools.multi_to_single_fast5:main
+single_to_multi_fast5 = ont_fast5_api.conversion_tools.single_to_multi_fast5:main
+

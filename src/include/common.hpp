@@ -64,14 +64,14 @@ typedef float value_ht;
 
 #define KMER_LEN 6
 #define WARP_SIZE 32
-#define SEGMENT_SIZE 1
+#define SEGMENT_SIZE 32
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN (64)
+#define QUERY_LEN (4096)
 //>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32; >=64 if
 // using PINGPONG buffer
 
 #ifndef FP16
-#define REF_LEN (64) // indicates total length of forward + backward squiggle
+#define REF_LEN (47*1024*2) // indicates total length of forward + backward squiggle
 // genome ; should be a multiple of SEGMENT_SIZE*WARP_SIZE
 #else
 #define REF_LEN (47 * 1024) // length of fwd strand in case of FP16
