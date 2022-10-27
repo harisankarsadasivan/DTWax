@@ -66,40 +66,39 @@ typedef float value_ht;
 #define WARP_SIZE 32
 #define SEGMENT_SIZE 32
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN (512)
+#define QUERY_LEN (2048)
 #define PREFIX_LEN 512
 //>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32; >=64 if
 // using PINGPONG buffer
 
 #ifndef FP16
-#define REF_LEN (47*1024*2) // indicates total length of forward + backward squiggle
+#define REF_LEN                                                                \
+  (47 * 1024 * 2) // indicates total length of forward + backward squiggle
 // genome ; should be a multiple of SEGMENT_SIZE*WARP_SIZE
 #else
 #define REF_LEN (47 * 1024) // length of fwd strand in case of FP16
 #endif
 
-#define BLOCK_NUM (2)
+#define BLOCK_NUM (1)
 #define STREAM_NUM 1
 // #define SMEM_BUFFER_SIZE 32 // has to be a multiple of 2*WARP_SIZE
 
 #define ADAPTER_LEN 1000
 #define ONT_FILE_FORMAT "fast5"
 
-
 //-----------------derived variables--------------------------//
 
 #define REF_TILE_SIZE (SEGMENT_SIZE * WARP_SIZE)
 #define REF_BATCH (REF_LEN / REF_TILE_SIZE)
-#define QUERY_BATCH (QUERY_LEN/PREFIX_LEN)
+#define QUERY_BATCH (QUERY_LEN / PREFIX_LEN)
 
 /* calculate when to stop, and which thread has final result */
-#define NUM_WAVES (PREFIX_LEN + (REF_TILE_SIZE - 1) / (SEGMENT_SIZE))
+#define NUM_WAVES                                                              \
+  (PREFIX_LEN + (REF_TILE_SIZE - 1) / (SEGMENT_SIZE)) // must be greater than 64
 #define WARP_SIZE_MINUS_ONE (WARP_SIZE - 1)
 #define RESULT_REG (SEGMENT_SIZE - 1)
 #define NUM_WAVES_BY_WARP_SIZE ((NUM_WAVES / WARP_SIZE) * WARP_SIZE)
 #define REF_BATCH_MINUS_ONE (REF_BATCH - 1)
-#define TWICE_WARP_SIZE (2 * WARP_SIZE)
-
-
+#define TWICE_WARP_SIZE_MINUS_ONE ((2 * WARP_SIZE) - 1)
 
 #endif

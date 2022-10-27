@@ -200,7 +200,7 @@ int main(int argc, char **argv) {
     ASSERT(cudaMalloc(&device_dist[stream_id], (sizeof(value_ht) * BLOCK_NUM)));
     ASSERT(cudaStreamCreate(&stream_var[stream_id]));
     ASSERT(cudaMalloc(&device_last_row[stream_id],
-                      (sizeof(value_ht) * (REF_LEN))));
+                      (sizeof(value_ht) * (REF_LEN * BLOCK_NUM))));
   }
 
   TIMERSTOP(malloc)
@@ -258,7 +258,8 @@ int main(int argc, char **argv) {
       //---------launch kernels------------//
       distances<value_ht, idxt>(d_ref_coeffs, device_query[stream_id - 1],
                                 device_dist[stream_id - 1], rds_in_stream,
-                                FLOAT2HALF2(0), stream_var[stream_id - 1],device_last_row[stream_id-1]);
+                                FLOAT2HALF2(0), stream_var[stream_id - 1],
+                                device_last_row[stream_id - 1]);
 
       //-----d2h copy--------------//
       ASSERT(cudaMemcpyAsync(
@@ -303,13 +304,14 @@ int main(int argc, char **argv) {
   for (int stream_id = 0; stream_id < STREAM_NUM; stream_id++) {
     cudaFree(device_dist[stream_id]);
     cudaFree(device_query[stream_id]);
+    cudaFree(device_last_row[stream_id]);
   }
 
   cudaFreeHost(host_query);
   cudaFreeHost(host_dist);
   cudaFree(h_ref_coeffs);
   cudaFree(d_ref_coeffs);
-  cudaFree(device_last_row);
+
   TIMERSTOP(free)
 
   return 0;
