@@ -64,9 +64,10 @@ typedef float value_ht;
 
 #define KMER_LEN 6
 #define WARP_SIZE 32
-#define SEGMENT_SIZE 32
+// 32 seems to produce results more closer to python with less divergence
 #define LOG_WARP_SIZE 5
-#define QUERY_LEN (2048)
+#define SEGMENT_SIZE 40
+#define QUERY_LEN (1024)
 #define PREFIX_LEN 512
 //>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32; >=64 if
 // using PINGPONG buffer
@@ -79,8 +80,8 @@ typedef float value_ht;
 #define REF_LEN (47 * 1024) // length of fwd strand in case of FP16
 #endif
 
-#define BLOCK_NUM (1)
-#define STREAM_NUM 1
+#define BLOCK_NUM (84 * 16)
+#define STREAM_NUM 16
 // #define SMEM_BUFFER_SIZE 32 // has to be a multiple of 2*WARP_SIZE
 
 #define ADAPTER_LEN 1000

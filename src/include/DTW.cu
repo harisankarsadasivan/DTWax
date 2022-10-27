@@ -45,7 +45,7 @@ __device__ __forceinline__ void
 compute_segment(idxt &wave, const idx_t &thread_id, val_t &query_val,
                 val_t (&ref_coeff1)[SEGMENT_SIZE], val_t &penalty_left,
                 val_t (&penalty_here)[SEGMENT_SIZE], val_t &penalty_diag,
-                val_t (&penalty_temp)[2], val_t query_batch) {
+                val_t (&penalty_temp)[2], idxt query_batch) {
   /* calculate SEGMENT_SIZE cells */
   penalty_temp[0] = penalty_here[0];
 
@@ -155,9 +155,6 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
 #if REF_BATCH > 1
   __shared__ val_t penalty_last_col[PREFIX_LEN]; ////RBD: have to chnge this
 #endif ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#if QUERY_BATCH >= 1
-  __shared__ val_t penalty_last_row[REF_TILE_SIZE]; ////RBD: have to chnge this
-#endif ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   /* create vars for indexing */
   const idx_t block_id = blockIdx.x;
@@ -205,9 +202,10 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
              HALF2FLOAT(ref_coeff1[i].x));
 #endif
 #endif
-#if QUERY_BATCH >= 1
+#if QUERY_BATCH > 1
       if (query_batch > 0)
-        penalty_here[i] = penalty_last_row[threadIdx.x * SEGMENT_SIZE + i];
+        penalty_here[i] =
+            device_last_row[block_id * REF_LEN + thread_id + i * WARP_SIZE];
 #endif
     }
 
@@ -290,11 +288,12 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
     }
 
 // write last row to smem
-#if QUERY_BATCH >= 1
+#if QUERY_BATCH > 1
     for (idxt i = 0; i < SEGMENT_SIZE; i++) {
-      penalty_last_row[thread_id * SEGMENT_SIZE + i] = penalty_here[i];
+      device_last_row[block_id * REF_LEN + thread_id + i * WARP_SIZE] =
+          penalty_here[i];
 #ifdef NV_DEBUG
-      printf("last row idx=%0d, val=%0f\n", thread_id * SEGMENT_SIZE + i,
+      printf("last row idx=%0d, val=%0f\n", thread_id + i * WARP_SIZE,
              penalty_here[i]);
 #endif
     }
@@ -324,7 +323,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
         for (auto i = 0; i < SEGMENT_SIZE; i++)
           penalty_here[i] =
               device_last_row[block_id * REF_LEN + ref_batch * REF_TILE_SIZE +
-                              thread_id * SEGMENT_SIZE + i];
+                              thread_id + i * WARP_SIZE];
       }
 
       // for (auto i = 0; i < 2; i++)
@@ -415,14 +414,14 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       }
 
 // write last row to smem
-#if QUERY_BATCH >= 1
+#if QUERY_BATCH > 1
       for (idxt i = 0; i < SEGMENT_SIZE; i++) {
         device_last_row[block_id * REF_LEN + ref_batch * REF_TILE_SIZE +
-                        thread_id * SEGMENT_SIZE + i] = penalty_here[i];
+                        thread_id + i * WARP_SIZE] = penalty_here[i];
 #ifdef NV_DEBUG
         printf("penalty last row write, last ref batc i=%0d,tid=%0d, val=%0f\n",
-               block_id * REF_LEN + REF_LEN - REF_TILE_SIZE +
-                   thread_id * SEGMENT_SIZE + i,
+               block_id * REF_LEN + REF_LEN - REF_TILE_SIZE + thread_id +
+                   i * WARP_SIZE,
                thread_id, penalty_here[i]);
 #endif
       }
@@ -450,12 +449,12 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       for (auto i = 0; i < SEGMENT_SIZE; i++) {
         penalty_here[i] =
             device_last_row[block_id * REF_LEN + REF_LEN - REF_TILE_SIZE +
-                            thread_id * SEGMENT_SIZE + i];
+                            thread_id + i * WARP_SIZE];
 #ifdef NV_DEBUG
         printf("gmem read penalty last row last ref batch i=%0d,tid=%0d, "
                "val=%0f\n",
-               block_id * REF_LEN + REF_LEN - REF_TILE_SIZE +
-                   thread_id * SEGMENT_SIZE + i,
+               block_id * REF_LEN + REF_LEN - REF_TILE_SIZE + thread_id +
+                   i * WARP_SIZE,
                thread_id, penalty_here[i]);
 #endif
       }
@@ -542,14 +541,14 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
       }
     }
     // write last row to smem
-#if QUERY_BATCH >= 1
+#if QUERY_BATCH > 1
     for (idxt i = 0; i < SEGMENT_SIZE; i++) {
-      device_last_row[block_id * REF_LEN + REF_LEN - REF_TILE_SIZE +
-                      thread_id * SEGMENT_SIZE + i] = penalty_here[i];
+      device_last_row[block_id * REF_LEN + REF_LEN - REF_TILE_SIZE + thread_id +
+                      i * WARP_SIZE] = penalty_here[i];
 #ifdef NV_DEBUG
       printf("gmem write, last row idx=%0d, val=%0f\n",
-             block_id * REF_LEN + REF_LEN - REF_TILE_SIZE +
-                 thread_id * SEGMENT_SIZE + i,
+             block_id * REF_LEN + REF_LEN - REF_TILE_SIZE + thread_id +
+                 i * WARP_SIZE,
              penalty_here[i]);
 #endif
     }
