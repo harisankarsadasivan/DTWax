@@ -48,8 +48,8 @@ results_dir = f"scripts/results/artifact-eval"
 # user-defined analysis params
 virus_max_reads = 1
 other_max_reads = 1
-R=47*1024*2
-N=512
+R= (47 * 1024 * 2)
+N=2048
 prefix_lengths = np.array(range(N,N+1,500))
 # prefix_lengths = np.array(range(500,3001,500))
 nprefixes = len(prefix_lengths)
@@ -219,7 +219,7 @@ def sdtw_default(seq):
             cost_mat[i, j] = pow(seq[i]-ref[j],2) + min(cost_mat[i-1, j-1], cost_mat[i-1, j])
     for i in range(len(seq)):
         # for j in range(1, len(ref)):
-        print("i=",i,"val=",cost_mat[i][R-1])
+        print("i=",i,"query=",seq[i],"val[0]=",cost_mat[i][0],"val[1]=",cost_mat[i][1],"val[31]=",cost_mat[i][31],"val[32]=",cost_mat[i][32],"val[R-2]=",cost_mat[i][R-2],"val[R-1]=",cost_mat[i][R-1])
         # print("i=",i,"q=",seq[i],"ref[1]=",ref[1],"val[0]=",cost_mat[i, 0],"val[1]=",cost_mat[i, 1],"val[30]=",cost_mat[i, N-2],"val[31]=",cost_mat[i, N-1] )       
     # print(np.array(min(cost_mat[len(seq)-1,:])))     
     return np.array(min(cost_mat[len(seq)-1,:]))
