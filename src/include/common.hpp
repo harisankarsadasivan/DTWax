@@ -67,8 +67,8 @@ typedef float value_ht;
 // 32 seems to produce results more closer to python with less divergence
 #define LOG_WARP_SIZE 5
 #define SEGMENT_SIZE 40
-#define QUERY_LEN (1024)
-#define PREFIX_LEN 512
+#define QUERY_LEN (512)
+#define PREFIX_LEN (512)
 //>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32; >=64 if
 // using PINGPONG buffer
 

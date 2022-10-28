@@ -172,8 +172,8 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
    * values */
   val_t ref_coeff1[SEGMENT_SIZE]; // ref_coeff2[SEGMENT_SIZE];
 
-  /* load next WARP_SIZE query values from memory into new_query_val buffer */
-
+/* load next WARP_SIZE query values from memory into new_query_val buffer */
+#pragma unroll
   for (idxt query_batch = 0; query_batch < QUERY_BATCH; query_batch++) {
 
     val_t penalty_left = FLOAT2HALF2(INFINITY);

@@ -207,13 +207,13 @@ int main(int argc, char **argv) {
 
   //****************************************************Mem I/O and DTW
   // computation****************************************//
-  TIMERSTART_CUDA(concurrent_DTW_kernel_launch)
+
   //-------------total batches of concurrent workload to & fro
   // device---------------//
   idxt batch_count = NUM_READS / (BLOCK_NUM * STREAM_NUM);
   std::cout << "Batch count: " << batch_count << " num_reads:" << NUM_READS
             << "\n";
-
+  TIMERSTART_CUDA(concurrent_DTW_kernel_launch)
   for (idxt batch_id = 0; batch_id <= batch_count; batch_id += 1) {
     std::cout << "Processing batch_id: " << batch_id << "\n";
 

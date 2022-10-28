@@ -121,7 +121,7 @@ void squiggle_loader::load_data(std::string fn,
     }
 
     std::vector<std::string> reads = fast5_get_multi_read_groups(f5_file);
-
+    // std::cerr << fast5_get_read_id_single_fast5(f5_file);
     // #pragma omp parallel for
     // check every read in ONT file
     // std::cout << "Query from fast5:\n";
