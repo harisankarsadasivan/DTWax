@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
   }
 
   TIMERSTOP(malloc)
-
+  cudaDeviceSetCacheConfig(cudaFuncCachePreferShared); //
   //****************************************************Mem I/O and DTW
   // computation****************************************//
 

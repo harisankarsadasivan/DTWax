@@ -31,10 +31,6 @@ All rights reserved. # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 //...............global variables..........................//
 #ifdef FP16
 
-#ifdef PINGPONG_BUFFER
-#include <cuda/pipeline>
-#endif
-
 #include <cuda_fp16.h>
 typedef __half2 value_ht;
 #define HALF2FLOAT(a) __half2float(a)
@@ -45,11 +41,9 @@ typedef __half2 value_ht;
 #define SUB(a, b) __hsub2(a, b)
 #define SQRT(a) h2sqrt(a)
 #define FLOAT2HALF2(a) FLOAT2HALF(a, a)
+#define GT(a, b) __hgt(a, b)
 
 #else
-#ifdef PINGPONG_BUFFER
-#include <cuda/pipeline>
-#endif
 typedef float value_ht;
 #define FLOAT2HALF(a) a
 #define HALF2FLOAT(a) a
@@ -60,15 +54,16 @@ typedef float value_ht;
 #define SUB(a, b) (a - b) // make sure b is power of 2
 #define SQRT(a) sqrtf(a)  // a is to be float
 #define FLOAT2HALF2(a) FLOAT2HALF(a)
+#define GT(a, b) (a > b)
 #endif
 
 #define KMER_LEN 6
 #define WARP_SIZE 32
 // 32 seems to produce results more closer to python with less divergence
 #define LOG_WARP_SIZE 5
-#define SEGMENT_SIZE 40
-#define QUERY_LEN (512)
-#define PREFIX_LEN (512)
+#define SEGMENT_SIZE 26 // 40
+#define QUERY_LEN (512 * 4)
+#define PREFIX_LEN (512 * 2)
 //>=WARP_SIZE for the coalesced shared mem; has to be a multiple of 32; >=64 if
 // using PINGPONG buffer
 
@@ -80,7 +75,7 @@ typedef float value_ht;
 #define REF_LEN (47 * 1024) // length of fwd strand in case of FP16
 #endif
 
-#define BLOCK_NUM (84 * 16)
+#define BLOCK_NUM (108 * 32)
 #define STREAM_NUM 16
 // #define SMEM_BUFFER_SIZE 32 // has to be a multiple of 2*WARP_SIZE
 

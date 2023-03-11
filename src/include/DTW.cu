@@ -285,6 +285,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
               min_segment, thread_id, wave, 0, query_batch);
 #endif
       }
+
     }
 
 // write last row to smem
@@ -411,6 +412,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
           if (wave != (NUM_WAVES))
             min_segment = __shfl_up_sync((ALL), min_segment, 1);
         }
+
       }
 
 // write last row to smem
@@ -539,6 +541,7 @@ __global__ void DTW(reference_coefficients *ref, val_t *query, val_t *dist,
         if (wave != (NUM_WAVES))
           min_segment = __shfl_up_sync((ALL), min_segment, 1);
       }
+
     }
     // write last row to smem
 #if QUERY_BATCH > 1
