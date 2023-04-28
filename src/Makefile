@@ -5,17 +5,27 @@ LIBS = -lz -lhdf5 -I/usr/include/hdf5/serial -L/usr/lib/x86_64-linux-gnu/hdf5/se
 
 # LIBS = -lhdf5 -lcudnn -I/usr/include/hdf5/serial -L/usr/lib -L/usr/lib/x86_64-linux-gnu/hdf5/serial -I/usr/local/include -L/usr/local/lib -L/usr/local/lib 
 # NVCCFLAGS= -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DSDTW -DFP16 -DNO_REF_DEL -DNV_DEBUG 
-NVCCFLAGS= -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_80,code=sm_80 --compiler-options -Wall -DNO_REF_DEL -DFP16#-DNV_DEBUG#-DFP16#-DNV_DEBUG #--DFP16 
+NVCCFLAGS= -std=c++11 --ptxas-options=-v --default-stream per-thread  -O2 -lineinfo -gencode=arch=compute_86,code=sm_86 --compiler-options -Wall -DNO_REF_DEL -DFP16#-DNV_DEBUG#-DFP16#-DNV_DEBUG #--DFP16 
 CXXFLAGS= -Xcompiler="-fopenmp -march=native" -O2#-DNV_DEBUG
-export HDF5_PLUGIN_PATH=/home/hsadasivan/.local/hdf5/lib/plugin
+export HDF5_PLUGIN_PATH=/home/hariss/.local/hdf5/lib/plugin
+
+# ifdef READ_UNTIL
+#     MAIN_FILE = ru_main.cu
+# else
+#     MAIN_FILE = main.cu
+# endif
+
 all: main
 
-main: main.cu
+main: $(MAIN_FILE)
 	$(NVCC) $(NVCCFLAGS) $(CXXFLAGS) $(LIBS) main.cu -o main
+
 format:
-	clang-format -i main.cu include/*.hpp include/*.cu
+	clang-format -i *.cu include/*.hpp include/*.cu
+
 clean:
-		rm -rf main 
+		rm -rf main
+
 $(LIBHDF5):
 	cd ../hdf5 && \
 	./configure --enable-threadsafe --disable-hl --prefix=`pwd` --enable-shared=no --with-pic=yes || exit 255

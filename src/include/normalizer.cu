@@ -95,9 +95,9 @@ __inline__ void normalizer::normalize(raw_t *raw_squiggle_array,
   cudnnDeriveBNTensorDescriptor(bnScaleBiasMeanVarDesc, x_desc, mode);
 
   // normalize
-  CUDNN_ASSERT(cudnnBatchNormalizationForwardTraining(
+  cudnnBatchNormalizationForwardTraining(
       handle_, mode, alpha, beta, x_desc, x, x_desc, x, bnScaleBiasMeanVarDesc,
-      bnScale, bnBias, 1.0 / (1.0 + h), NULL, NULL, 0.0001f, NULL, NULL));
+      bnScale, bnBias, 1.0 / (1.0 + h), NULL, NULL, 0.0001f, NULL, NULL);
 
   cudaMemcpy(
 

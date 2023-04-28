@@ -41,11 +41,24 @@ All rights reserved. # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 #include <stdio.h>
 #include <sys/types.h>
 
+#ifdef READ_UNTIL
+#include <chrono>
+#include <iostream>
+#include <mutex>
+#include <string>
+#include <thread>
+#endif
+
 class squiggle_loader {
 public:
   void load_data(std::string fn, value_t *host_query, index_t &no_of_reads,
                  std::vector<std::string> &read_ids);
+#ifndef READ_UNTIL
   void load_query(raw_t *raw_array);
+#else
+  void load_query(raw_t *raw_array, const std::string &PIPE_NAME,
+                  const int &PIPE_SIZE, std::vector<std::string> &read_ids);
+#endif
 
 private:
   std::vector<raw_t>
@@ -55,6 +68,7 @@ private:
                               std::vector<std::string> &file_queue);
 };
 
+#ifndef READ_UNTIL
 void squiggle_loader::load_query(raw_t *raw_array) {
 #ifdef NV_DEBUG
   std::cout << "Query loaded:\n";
@@ -71,7 +85,50 @@ void squiggle_loader::load_query(raw_t *raw_array) {
   std::cout << "\n=================\n";
 #endif
 }
+#else
 
+void squiggle_loader::load_query(raw_t *raw_array, const std::string &PIPE_NAME,
+                                 const int &PIPE_SIZE,
+                                 std::vector<std::string> &read_ids) {
+
+  std::ifstream pipe_fd(PIPE_NAME, std::ios::binary);
+
+  // Define mutex lock
+  // td::mutex mutex;
+
+  // while (true) {
+  // Read from named pipe
+  char buffer[PIPE_SIZE];
+  // mutex.lock();
+#ifdef NV_DEBUG
+  std::cerr << "before reading from pipe\n";
+#endif
+  pipe_fd.read(buffer, PIPE_SIZE);
+  // mutex.unlock();
+#ifdef NV_DEBUG
+  std::cerr << "after reading from pipe\n";
+#endif
+  // Process data from named pipe
+  for (int i = 0; i < PIPE_SIZE; i++) {
+
+    raw_array[i] = (raw_t)(unsigned char)buffer[i];
+    read_ids.push_back(std::to_string(i));
+#ifdef NV_DEBUG
+
+    std::cout << i << ":\t" << raw_array[i] << ",";
+#endif
+  }
+#ifdef NV_DEBUG
+  std::cout << "\n=================\n";
+#endif
+  // }
+
+  // Close named pipe
+  // pipe_fd.close();
+
+  return;
+}
+#endif
 void squiggle_loader::read_fast5_from_folder(
     std::string path, std::vector<std::string> &file_queue) {
 
