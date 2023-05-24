@@ -43,7 +43,7 @@ make -j 1000;
 
 ./main <fast5_folder>  ref/dna_kmer_model.txt <path_to_reference.fasta> > output_log;
 ```
-# Build and run the program (Online Read Until: Raw squiggle input) [[LIVE DEMO](https://youtu.be/E5XDGLGTH-M)]
+# Build and run the program (Online Read Until via API) [[LIVE DEMO](https://youtu.be/E5XDGLGTH-M)]
 ```
 ###Update source and Makefile to enable Read Until
 cp -rf Makefile_readuntil Makefile
