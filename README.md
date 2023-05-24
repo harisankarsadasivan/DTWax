@@ -14,12 +14,14 @@ sudo apt install hdf5-tools
 export HDF5_PLUGIN_PATH=$HOME/nv_cudtw/src:$HDF5_PLUGIN_PATH
 ```
 
+
 # Clone repo:
+```
 git clone --recursive https://github.com/hsadasivan/nv_cudtw.git -b FAST5
 cd src/;
-
+```
 #[Optional] Tune for threshold of classification [can vary based on wet-lab protocols]
-
+```
 make -j 1000;
 
 ### Run DTWax on dataset of reads belonging only to the target
@@ -30,7 +32,7 @@ make -j 1000;
 
 ### Find threshold of classification
 python calc_classification_threshold.py dtwax_microbial_log dtwax_nontarget_log
-
+```
 # Build and run the program (Offline: FAST5 input):
 ```
 
