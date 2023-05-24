@@ -20,7 +20,7 @@ export HDF5_PLUGIN_PATH=$HOME/nv_cudtw/src:$HDF5_PLUGIN_PATH
 git clone --recursive https://github.com/hsadasivan/nv_cudtw.git -b FAST5
 cd src/;
 ```
-# [Optional] Tune for threshold of classification [can vary based on wet-lab protocols]
+# [Optional] Tune for threshold of classification [may vary based on wet-lab protocols]
 ```
 make -j 1000;
 
