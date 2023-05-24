@@ -85,35 +85,4 @@ os.close(pipe_fd)
 os.unlink(PIPE_NAME)
 
 
-# import numpy
-# from read_until import ReadUntilClient
 
-# def analysis(client, *args, **kwargs):    
-    
-#     # keep track of the unique reads we have seen
-#     unique_reads = set()
-#     count=0
-#     batch_size=2
-#     pack_data=[]
-#     while client.is_running:
-#         for channel, read in client.get_read_chunks(batch_size=batch_size, last=True):
-#             if (read.id not in unique_reads):
-#                 unique_reads.add(read.id)
-#                 count=count+1
-#                 raw_data = numpy.fromstring(read.raw_data, client.signal_dtype)    
-#                 pack_data=pack_data+raw_data.tolist()
-#                 #print(pack_data)
-#                 if(count%2==0):
-#                     pack_data=[]
-#                 # print(count,read.chunk_classifications)      
-#                 print(count)
-#                 if count==batch_size:
-#                     print("batch")
-#                     count=0
-#                     unique_reads = set()
-#             else:
-#                 self.client.stop_receiving_read(channel,read.number);                    
-
-# read_until_client = ReadUntilClient()
-# read_until_client.run()
-# analysis(read_until_client)
