@@ -16,16 +16,55 @@ export HDF5_PLUGIN_PATH=$HOME/nv_cudtw/src:$HDF5_PLUGIN_PATH
 
 # Clone repo:
 git clone --recursive https://github.com/hsadasivan/nv_cudtw.git -b FAST5
-
-# Build and run the program:
-```
 cd src/;
 
-###Change the paths to hdf5 in Makefile.
+#[Optional] Tune for threshold of classification [can vary based on wet-lab protocols]
+
+make -j 1000;
+
+### Run DTWax on dataset of reads belonging only to the target
+./main <fast5_folder>  ref/dna_kmer_model.txt <path_to_reference.fasta> > dtwax_microbial_log;
+
+### Run DTWax on dataset of reads belonging only to the non-target
+./main <fast5_folder>  ref/dna_kmer_model.txt <path_to_reference.fasta> > dtwax_nontarget_log;
+
+### Find threshold of classification
+python calc_classification_threshold.py dtwax_microbial_log dtwax_nontarget_log
+
+# Build and run the program (Offline: FAST5 input):
+```
+
+
+###Review HDF5 plugin export path in Makefile; change compute_* and sm_* to your GPU's compute capability
 
 make -j 1000;
 
 ./main <fast5_folder>  ref/dna_kmer_model.txt <path_to_reference.fasta> > output_log;
+```
+# Build and run the program (Online Read Until: Raw squiggle input) [[LIVE DEMO](https://youtu.be/E5XDGLGTH-M)]
+```
+###Update source and Makefile to enable Read Until
+cp -rf Makefile_readuntil Makefile
+cp -rf ru_main.cu main.cu
+
+###Review HDF5 plugin export path in Makefile; change compute_* and sm_* to your GPU's compute capability
+make clean; make -j 1000;
+
+###Install Read Until python API
+cd ReadUntil/
+chmod -R 777 install_ru.sh
+./install_ru.sh
+
+### Start MinION sequencing
+### Start Read Until and dump DTWax's output to a log
+python3 ont_readuntil.py >> dtwax_log
+
+
+### Launch DTWatch to visualize virus vs non-target reads identified in real-time
+python3 plot_realtime.py dtwax_log <CLASSIFICATION_THRESHOLD>
+
+
+
 ```
 # Acknowledgement:
 cuDTW++: Ultra-Fast Dynamic Time Warping on CUDA-enabled GPUs: https://github.com/asbschmidt/cuDTW.
