@@ -7,11 +7,14 @@ Install CUDNN from https://docs.nvidia.com/deeplearning/cudnn/install-guide/inde
 
 # ONT pre-requisites:
 ```
+### If you don't have sudo access, you may try my install_hdf5_vbz.sh script. if you have sudo access, you may try the below commands.
+
 sudo apt-get install libhdf5-dev zlib1g-dev
 
 sudo apt install hdf5-tools
 
 export HDF5_PLUGIN_PATH=$HOME/nv_cudtw/src:$HDF5_PLUGIN_PATH
+
 ```
 
 
